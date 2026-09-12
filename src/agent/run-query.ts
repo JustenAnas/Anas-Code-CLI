@@ -1,23 +1,16 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
 import chalk from "chalk";
-import { handleMessage, MessageHandlerOptions } from "./message-handler.js";
-import { buildModeOptions, type CliMode } from "./modes.js";
+import { OpenRouterProvider } from "../providers/openrouter.js";
 
-export type RunQueryOptions = {
-    mode?: CliMode;
-    verbose?: boolean;
-}
+const provider = new OpenRouterProvider(process.env.OPENROUTER_API_KEY ?? "");
 
-export async function runQuery(prompt:string, options: RunQueryOptions = {} ){
-    try {
-        const {verbose = false , mode = "agent"} = options; 
-        for await (const message of query({
-            prompt,
-            options: buildModeOptions(mode),
-        })){
-            handleMessage(message , { verbose} );
-        }
-    } catch (error) {
-        console.error(chalk.red("Error: "), error);
-    }
+export async function runQuery(prompt: string, options: { verbose?: boolean } = {}) {
+  try {
+    await provider.streamMessage(
+      [{ role: "user", content: prompt }],
+      (chunk) => process.stdout.write(chunk)
+    );
+    console.log();
+  } catch (error) {
+    console.error(chalk.red("Error: "), error);
+  }
 }

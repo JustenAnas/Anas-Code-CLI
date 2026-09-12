@@ -3,7 +3,7 @@ import boxen from "boxen";
 import chalk from "chalk";
 import { startChat } from "./chat.js";
 import { checkEnvironment } from "../config/env.js";
-import { CLI_MODES, MODE_DESCRIPTIONS } from "../config/constants.js";
+import { CLI_MODES, MODE_DESCRIPTIONS } from "../config/constant.js";
 import { printBanner } from "../ui/banner.js";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
