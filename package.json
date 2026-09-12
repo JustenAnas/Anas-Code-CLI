@@ -18,6 +18,8 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@google/generative-ai": "^0.24.1",
     "@inquirer/prompts": "^8.7.2",
     "@types/figlet": "^1.7.0",
     "boxen": "^8.0.1",
@@ -26,6 +28,7 @@
     "dotenv": "^17.4.2",
     "execa": "^10.0.1",
     "figlet": "^1.11.4",
+    "openai": "^7.15.0",
     "ora": "^9.4.1"
   }
 }
