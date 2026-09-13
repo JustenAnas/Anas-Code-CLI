@@ -1,7 +1,7 @@
 import chalk from "chalk";
-import { OpenRouterProvider } from "../providers/openrouter.js";
+import { GeminiProvider } from "../providers/gemini.js";
 
-const provider = new OpenRouterProvider(process.env.OPENROUTER_API_KEY ?? "");
+const provider = new GeminiProvider(process.env.GEMINI_API_KEY ?? "");
 
 export async function runQuery(prompt: string, options: { verbose?: boolean } = {}) {
   try {
