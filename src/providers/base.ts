@@ -11,9 +11,9 @@ export type ProviderResponse = {
 
 export interface BaseProvider {
   name: string;
-  sendMessage(messages: Message[]): Promise<ProviderResponse>;
+  sendMessage(messages: Message[], systemPrompt?: string): Promise<ProviderResponse>;
   streamMessage(
     messages: Message[],
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void, systemPrompt?: string
   ): Promise<ProviderResponse>;
 }

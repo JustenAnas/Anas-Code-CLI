@@ -5,6 +5,7 @@ import { createProvider, type ProviderName } from "../providers/factory.js";
 import { startSpinner, stopSpinner } from "../ui/spinner.js";
 import { SLASH_COMMANDS } from "../config/constants.js";
 import type { Message } from "../providers/base.js";
+import { runAgentLoop, SYSTEM_PROMPT } from "../agent/loop.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -42,23 +43,23 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       continue;
     }
 
-    history.push({ role: "user", content: trimmed });
+    // history.push({ role: "user", content: trimmed });/
+
     startSpinner("Thinking…");
 
     try {
-      let fullResponse = "";
+      let firstChunk = true;
 
-      await provider.streamMessage(history, (chunk) => {
-        if (fullResponse === "") {
+      await runAgentLoop(trimmed, provider, history, (chunk) => {
+        if (firstChunk) {
           stopSpinner();
           process.stdout.write(fmt.assistant("Assistant: "));
+          firstChunk = false;
         }
         process.stdout.write(chunk);
-        fullResponse += chunk;
       });
 
       console.log();
-      history.push({ role: "assistant", content: fullResponse });
     } catch (error) {
       stopSpinner();
       console.error(fmt.error(`Error: ${error instanceof Error ? error.message : error}`));

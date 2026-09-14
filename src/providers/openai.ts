@@ -11,10 +11,12 @@ export class OpenAIProvider implements BaseProvider {
     this.model = "gpt-4o-mini";
   }
 
-  async sendMessage(messages: Message[]): Promise<ProviderResponse> {
+  async sendMessage(messages: Message[],systemPrompt?: string): Promise<ProviderResponse> {
     const response = await this.client.chat.completions.create({
       model: this.model,
-      messages,
+      messages: systemPrompt 
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages,
     });
 
     return {
@@ -26,13 +28,15 @@ export class OpenAIProvider implements BaseProvider {
 
   async streamMessage(
   messages: Message[],
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void, systemPrompt?: string
 ): Promise<ProviderResponse> {
   let fullContent = "";
 
   const stream = await this.client.chat.completions.create({
     model: this.model,
-    messages,
+    messages: systemPrompt
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages,
     stream: true,
   });
 

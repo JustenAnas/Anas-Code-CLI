@@ -14,10 +14,12 @@ export class OpenRouterProvider implements BaseProvider {
   this.model = model;
 }
 
-async sendMessage(messages: Message[]): Promise<ProviderResponse> {
+async sendMessage(messages: Message[],systemPrompt?: string): Promise<ProviderResponse> {
   const response = await this.client.chat.completions.create({
     model: this.model,
-    messages,
+   messages: systemPrompt 
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages,
   });
 
   return {
@@ -29,13 +31,15 @@ async sendMessage(messages: Message[]): Promise<ProviderResponse> {
 
 async streamMessage(
   messages: Message[],
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void, systemPrompt?: string
 ): Promise<ProviderResponse> {
   let fullContent = "";
 
   const stream = await this.client.chat.completions.create({
     model: this.model,
-    messages,
+    messages: systemPrompt
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages,
     stream: true,
   });
 

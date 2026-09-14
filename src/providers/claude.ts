@@ -11,10 +11,11 @@ export class ClaudeProvider implements BaseProvider {
     this.model = model;
   }
 
- async sendMessage(messages: Message[]): Promise<ProviderResponse> {
+ async sendMessage(messages: Message[], systemPrompt?: string): Promise<ProviderResponse> {
   const response = await this.client.messages.create({
     model: this.model,
     max_tokens: 8096,
+    system: systemPrompt,
     messages,
   });
 
@@ -27,7 +28,7 @@ export class ClaudeProvider implements BaseProvider {
 
  async streamMessage(
   messages: Message[],
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void, systemPrompt?: string
 ): Promise<ProviderResponse> {
   let fullContent = "";
   let inputTokens = 0;
@@ -36,6 +37,7 @@ export class ClaudeProvider implements BaseProvider {
   const stream = await this.client.messages.stream({
     model: this.model,
     max_tokens: 8096,
+    system: systemPrompt,
     messages,
   });
 

@@ -11,8 +11,11 @@ export class GeminiProvider implements BaseProvider {
   this.model = "gemini-3.6-flash";
 }
 
-async sendMessage(messages: Message[]): Promise<ProviderResponse> {
-  const geminiModel = this.client.getGenerativeModel({ model: this.model });
+async sendMessage(messages: Message[], systemPrompt?: string): Promise<ProviderResponse> {
+  const geminiModel = this.client.getGenerativeModel({
+    model: this.model,
+    systemInstruction: systemPrompt, 
+  });
 
   const history = messages.slice(0, -1).map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
@@ -30,9 +33,12 @@ async sendMessage(messages: Message[]): Promise<ProviderResponse> {
 }
 async streamMessage(
   messages: Message[],
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void, systemPrompt?: string
 ): Promise<ProviderResponse> {
-  const geminiModel = this.client.getGenerativeModel({ model: this.model });
+  const geminiModel = this.client.getGenerativeModel({
+    model: this.model,
+    systemInstruction: systemPrompt,
+   });
 
   const history = messages.slice(0, -1).map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
