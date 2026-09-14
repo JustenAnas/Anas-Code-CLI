@@ -3,10 +3,13 @@ import boxen from "boxen";
 import chalk from "chalk";
 import { startChat } from "./chat.js";
 import { checkEnvironment } from "../config/env.js";
-import { CLI_MODES, MODE_DESCRIPTIONS } from "../config/constant.js";
+import { CLI_MODES, MODE_DESCRIPTIONS } from "../config/constants.js";
 import { printBanner } from "../ui/banner.js";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
+import type { ProviderName } from "../providers/factory.js";
+
+const PROVIDERS: ProviderName[] = ["claude", "openai", "openrouter", "gemini"];
 
 async function runDoctor(): Promise<void> {
   await checkEnvironment();
@@ -22,6 +25,15 @@ function printModePanels(): void {
   }
 }
 
+async function selectProvider(): Promise<ProviderName> {
+  const provider = await select<ProviderName>({
+    message: "Choose a provider:",
+    choices: PROVIDERS.map((value) => ({ name: value, value })),
+    default: "openrouter",
+  });
+  return provider;
+}
+
 export async function wakeUp(): Promise<void> {
   printBanner();
   console.log();
@@ -33,6 +45,8 @@ export async function wakeUp(): Promise<void> {
     process.exit(1);
   }
 
+  console.log();
+  const provider = await selectProvider();
   console.log();
   printModePanels();
 
@@ -46,5 +60,5 @@ export async function wakeUp(): Promise<void> {
   });
 
   console.log();
-  await startChat({ mode });
+  await startChat({ mode, provider });
 }

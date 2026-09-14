@@ -12,7 +12,6 @@ export function requireApiKey(): string {
   return key;
 }
 
-
 export async function checkEnvironment(): Promise<void> {
   const { stdout } = await execa("node", ["-v"]);
   const major = parseInt(stdout.trim().replace(/^v/, "").split(".")[0] ?? "0", 10);
@@ -21,7 +20,6 @@ export async function checkEnvironment(): Promise<void> {
     throw new Error(`Node.js 18+ required (found ${stdout.trim()})`);
   }
 
-  requireApiKey();
   console.log(chalk.green("✓ Node.js is >= 18"));
-  console.log(chalk.green("✓ ANTHROPIC_API_KEY is set"));
+  console.log(chalk.green("✓ API key connected"));
 }

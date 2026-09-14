@@ -1,10 +1,16 @@
 import chalk from "chalk";
-import { GeminiProvider } from "../providers/gemini.js";
+import { createProvider } from "../providers/factory.js";
+import type { ProviderName } from "../providers/factory.js";
 
-const provider = new GeminiProvider(process.env.GEMINI_API_KEY ?? "");
+export type RunQueryOptions = {
+  verbose?: boolean;
+  provider?: ProviderName;
+};
 
-export async function runQuery(prompt: string, options: { verbose?: boolean } = {}) {
+export async function runQuery(prompt: string, options: RunQueryOptions = {}) {
   try {
+    const provider = createProvider(options.provider ?? "openrouter");
+
     await provider.streamMessage(
       [{ role: "user", content: prompt }],
       (chunk) => process.stdout.write(chunk)

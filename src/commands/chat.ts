@@ -162,10 +162,12 @@
 import { input } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
+import type { ProviderName } from "../providers/factory.js";
 
 export type ChatOptions = {
   mode?: CliMode;
   verbose?: boolean;
+  provider?: ProviderName;
 };
 
 export async function startChat(options: ChatOptions = {}): Promise<void> {
