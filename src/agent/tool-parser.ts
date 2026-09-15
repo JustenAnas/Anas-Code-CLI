@@ -1,5 +1,34 @@
 export function parseToolCall(response: string) {
-    // Standard format
+    // Count actual tool-call structures, not mentions of tool names.
+    const standardCalls =
+        response.match(/<tool_call>[\s\S]*?<\/tool_call>/g) || [];
+
+    const taggedCalls =
+        response.match(
+            /<(read_file|write_file|bash|glob|list_dir)\b[^>]*>([\s\S]*?)<\/\1>/g
+        ) || [];
+
+    const selfClosingCalls =
+        response.match(
+            /<(read_file|write_file|bash|glob|list_dir)\s+[^>]*?\/>/g
+        ) || [];
+
+    const functionCalls =
+        response.match(
+            /(?:read_file|write_file|bash|glob|list_dir)\([\s\S]*?\)/g
+        ) || [];
+
+    const toolCallCount =
+        standardCalls.length +
+        taggedCalls.length +
+        selfClosingCalls.length +
+        functionCalls.length;
+
+    if (toolCallCount > 1) {
+        return { invalid: true };
+    }
+
+    // Standard <tool_call> format
     const toolCallMatch = response.match(
         /<tool_call>([\s\S]*?)<\/tool_call>/
     );
@@ -7,10 +36,10 @@ export function parseToolCall(response: string) {
     if (toolCallMatch) {
         try {
             return JSON.parse(toolCallMatch[1]);
-        } catch { }
+        } catch {}
     }
 
-    // OpenRouter: tool tag with JSON inside
+    // Tool tag containing JSON
     const toolTagMatch = response.match(
         /<(read_file|write_file|bash|glob|list_dir)[^>]*>([\s\S]*?)<\/\1>/
     );
@@ -22,10 +51,10 @@ export function parseToolCall(response: string) {
             if (jsonMatch) {
                 return JSON.parse(jsonMatch[0]);
             }
-        } catch { }
+        } catch {}
     }
 
-    // OpenRouter self-closing format
+    // Self-closing tag with attributes
     const selfClosingMatch = response.match(
         /<(read_file|write_file|bash|glob|list_dir)\s+([^>]*?)\/>/
     );
@@ -38,19 +67,38 @@ export function parseToolCall(response: string) {
             input[match[1]] = match[2];
         }
 
-        return {
-            name: selfClosingMatch[1],
-            input,
-        };
+        if (Object.keys(input).length > 0) {
+            return {
+                name: selfClosingMatch[1],
+                input,
+            };
+        }
+
+        // Self-closing tag containing JSON
+        const jsonMatch = attributes.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch {}
+        }
     }
 
-    // OpenRouter function-call style
-    // OpenRouter function-call style
+    // Function-call style
     const functionMatch = response.match(
-        /(read_file|write_file|bash|glob|list_dir)\(([\s\S]*)\)/
+        /(read_file|write_file|bash|glob|list_dir)\(([\s\S]*?)\)/
     );
 
     if (functionMatch) {
+        // Function call containing JSON object
+        try {
+            const parsed = JSON.parse(functionMatch[2]);
+
+            if (parsed.name && parsed.input) {
+                return parsed;
+            }
+        } catch {}
+
         const input: Record<string, string> = {};
 
         for (const match of functionMatch[2].matchAll(
@@ -66,6 +114,7 @@ export function parseToolCall(response: string) {
             };
         }
 
+        // Function call with positional arguments
         try {
             const args = JSON.parse(`[${functionMatch[2]}]`);
 
@@ -80,7 +129,7 @@ export function parseToolCall(response: string) {
                                 ? { pattern: args[0] }
                                 : { path: args[0] },
             };
-        } catch { }
+        } catch {}
     }
 
     return null;
