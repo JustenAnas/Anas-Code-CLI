@@ -3,6 +3,7 @@ import { readFileTool } from "../tools/read-file.js";
 import { writeFileTool } from "../tools/write-file.js";
 import { bashTool } from "../tools/bash.js";
 import { globTool } from "../tools/glob.js";
+import { parseToolCall } from "./tool-parser.js";
 import { listDirTool } from "../tools/list-dir.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
@@ -134,14 +135,11 @@ export async function runAgentLoop(
         history.push({ role: "assistant", content: fullResponse });
 
         // check if AI wants to use a tool
-        const toolCallMatch = fullResponse.match(
-              /<tool_call>([\s\S]*?)<\/tool_call>/
-        );
+        const toolCall = parseToolCall(fullResponse);
 
-        if (!toolCallMatch) break; // no tool call — AI is done
+        if (!toolCall) break;
 
         try {
-            const toolCall = JSON.parse(toolCallMatch[1]);
 
             const toolResult = await executeTool(
                 toolCall.name,
@@ -154,8 +152,16 @@ export async function runAgentLoop(
                 role: "user",
                 content: `Tool result: ${toolResult}`,
             });
-        } catch {
-            break;
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : String(error);
+
+            onChunk(`\n[Tool Error] → ${errorMessage}\n`);
+
+            history.push({
+                role: "user",
+                content: `Tool error: ${errorMessage}. Please try again.`,
+            });
         }
     }
 }
