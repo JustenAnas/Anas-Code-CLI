@@ -39,7 +39,12 @@ list_dir then glob then write files then glob then write file then read file the
 IMPORTANT: Use ONLY ONE tool call in each response.
 After making one tool call, STOP and wait for the tool result.
 Never output multiple tool calls in the same response.
-When you are done with all tool calls, give your final response normally without any tool_call tags.Be concise and clear and always be nice and sweet in your response.`;
+When you are done with all tool calls, give your final response normally without any tool_call tags.Be concise and clear and always be nice and sweet in your response.
+
+If a tool returns an error, do not invent a result.
+Do not create, modify, or delete anything unless the user explicitly asked for it or it is necessary to complete the user's request.
+If read_file says a file does not exist and the user only asked to read it, report that the file does not exist. Do not create it.
+`;
 
 export const TOOLS = [
   {
