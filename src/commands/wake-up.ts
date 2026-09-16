@@ -8,6 +8,7 @@ import { printBanner } from "../ui/banner.js";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
 import type { ProviderName } from "../providers/factory.js";
+import { config } from "../config/user-config.js";
 
 const PROVIDERS: ProviderName[] = ["claude", "openai", "openrouter", "gemini"];
 
@@ -26,11 +27,13 @@ function printModePanels(): void {
 }
 
 async function selectProvider(): Promise<ProviderName> {
+  const saved = config.get("provider");
   const provider = await select<ProviderName>({
     message: "Choose a provider:",
     choices: PROVIDERS.map((value) => ({ name: value, value })),
-    default: "openrouter",
+    default: saved,
   });
+  config.set("provider", provider);
   return provider;
 }
 
@@ -51,13 +54,15 @@ export async function wakeUp(): Promise<void> {
   printModePanels();
 
   const mode = await select<CliMode>({
-    message: "Choose a mode to start:",
-    choices: CLI_MODES.map((value) => ({
-      name: `${value} — ${MODE_DESCRIPTIONS[value]}`,
-      value,
-    })),
-    default: "agent",
-  });
+  message: "Choose a mode to start:",
+  choices: CLI_MODES.map((value) => ({
+    name: `${value} — ${MODE_DESCRIPTIONS[value]}`,
+    value,
+  })),
+  default: config.get("mode"),
+});
+
+config.set("mode", mode);
 
   console.log();
   await startChat({ mode, provider });
