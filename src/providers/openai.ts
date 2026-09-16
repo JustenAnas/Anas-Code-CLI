@@ -78,6 +78,22 @@ const TOOLS = [
       },
     },
   },
+  {
+  type: "function" as const,
+  function: {
+    name: "edit_file",
+    description: "Edit a specific part of a file by replacing exact text",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The file path to edit" },
+        oldStr: { type: "string", description: "The exact text to find and replace" },
+        newStr: { type: "string", description: "The new text to replace it with" },
+      },
+      required: ["path", "oldStr", "newStr"],
+    },
+  },
+},
 ];
 
 export class OpenAIProvider implements BaseProvider {
@@ -87,7 +103,7 @@ export class OpenAIProvider implements BaseProvider {
 
   constructor(apiKey: string) {
     this.client = new OpenAI({ apiKey });
-    this.model = "gpt-4o-mini";
+    this.model = "gpt-4o";
   }
 
   private buildMessages(messages: Message[], systemPrompt?: string): any[] {

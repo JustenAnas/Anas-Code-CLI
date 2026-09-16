@@ -3,10 +3,12 @@ import { readdir } from "fs/promises";
 export async function listDirTool(path: string): Promise<string> {
   try {
     const entries = await readdir(path, { withFileTypes: true });
+    if (entries.length === 0) return "Directory is empty";
     const result = entries.map((entry) => {
-      return entry.isDirectory() ? `📁 ${entry.name}/` : `📄 ${entry.name}`;
+      const fullPath = `${path}/${entry.name}`;
+      return entry.isDirectory() ? `📁 ${fullPath}/` : `📄 ${fullPath}`;
     });
-   return result.length === 0 ? "Directory is empty" : result.join("\n");
+    return result.join("\n");
   } catch (error) {
     return `Error listing directory: ${error instanceof Error ? error.message : error}`;
   }

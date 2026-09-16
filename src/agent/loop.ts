@@ -1,4 +1,3 @@
-
 import type { BaseProvider, Message } from "../providers/base.js";
 import { readFileTool } from "../tools/read-file.js";
 import { writeFileTool } from "../tools/write-file.js";
@@ -6,11 +5,13 @@ import { bashTool } from "../tools/bash.js";
 import { globTool } from "../tools/glob.js";
 import { parseToolCall } from "./tool-parser.js";
 import { listDirTool } from "../tools/list-dir.js";
+import { editFileTool } from "../tools/edit-file.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
 - read_file(path): Read a file's contents
 - write_file(path, content): Create or overwrite a file
+- edit_file(path, oldStr, newStr): Edit a specific part of a file by replacing exact text — use this instead of write_file when modifying existing files
 - bash(command): Run a terminal command
 - glob(pattern): Find files matching a pattern
 - list_dir(path): List files in a directory
@@ -21,7 +22,7 @@ IMPORTANT: The bash tool runs on Windows CMD, not Linux or Unix.
 - For creating directories, use "mkdir folder\\subfolder".
 - For paths in bash commands, use Windows-compatible paths such as "agent-test\\test-folder".
 - Do not use "./" paths inside bash commands.
-- The ./ path format is still required for read_file, write_file, glob, and list_dir.
+- The ./ path format is still required for read_file, write_file, edit_file, glob, and list_dir.
 
 When you need to use a tool, use the provided tool directly.
 Do not write tool calls as text, XML, JSON, or <tool_call> tags.
@@ -31,22 +32,15 @@ After the tool result is returned, continue with the task.
 Always use relative paths starting with ./ (e.g. ./folder/file.ts), never absolute paths starting with /.
 For bash commands, follow the Windows CMD rules above.
 
-And when youre working on a folder structure, you can use this way
-list_dir then glob then write files then glob then write file then read file then if needed bash command then use read and write till the work is finished. For example of making a todo app(an example) do these-
-(use steps only when you needed)
-1 check if todo app is already created if yes any files inside it
-2 if not create todo app then check again is it actually created with no spelling mistake and all
-3 then create files like html
-4 then write the html code
-5 then read it
-6 then create css file
-7 then write css file
-8 then read it again
-9 then go to js and repeat the same process as html and css
-10 if needed only then install commands (use bash)
-11 after everything is done check the files and read them and if needed write again and again till the work is finished. And see if they are working or not.
+When working on a folder structure:
+- First explore with list_dir and glob
+- Create new files with write_file
+- Modify existing files with edit_file, never rewrite the whole file unless necessary
+- Read files after writing to verify correctness
+- Use bash only when needed (installing packages, creating directories)
+- After everything is done, read all files and fix anything incorrect
 
-When you are done with all tool calls, give your final response normally without any tool_call tags. Be concise and clear and always be nice and sweet in your response.
+When you are done with all tool calls, give your final response normally. Be concise and clear.
 
 If a tool returns an error, do not invent a result.
 Do not create, modify, or delete anything unless the user explicitly asked for it or it is necessary to complete the user's request.
@@ -110,6 +104,19 @@ export const TOOLS = [
       required: ["path"],
     },
   },
+  {
+    name: "edit_file",
+    description: "Edit a specific part of a file by replacing exact text",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The file path to edit" },
+        oldStr: { type: "string", description: "The exact text to find and replace" },
+        newStr: { type: "string", description: "The new text to replace it with" },
+      },
+      required: ["path", "oldStr", "newStr"],
+    },
+  },
 ];
 
 async function executeTool(
@@ -127,6 +134,8 @@ async function executeTool(
       return globTool(input.pattern);
     case "list_dir":
       return listDirTool(input.path);
+    case "edit_file":
+      return editFileTool(input.path, input.oldStr, input.newStr);
     default:
       return `Unknown tool: ${name}`;
   }
@@ -145,33 +154,17 @@ export async function runAgentLoop(
 
   while (iterations < MAX_ITERATIONS) {
     iterations++;
-    let fullResponse = "";
 
     let response;
 
     try {
-      response = await provider.streamMessage(
-        history,
-        (chunk) => {
-          fullResponse += chunk;
-
-          if (
-            !fullResponse.includes("<tool_call>") &&
-            !fullResponse.match(
-              /<(read_file|write_file|bash|glob|list_dir)\b/,
-            )
-          ) {
-            onChunk(chunk);
-          }
-        },
-        SYSTEM_PROMPT,
-      );
+      response = await provider.sendMessage(history, SYSTEM_PROMPT);
+      if (response.content) onChunk(response.content);
     } catch (error) {
       throw error;
     }
-    
 
-    // Native tool calling for providers that support it.
+    // Native tool calling
     if (response.toolCall) {
       const toolCall = response.toolCall;
 
@@ -184,10 +177,7 @@ export async function runAgentLoop(
       });
 
       try {
-        const toolResult = await executeTool(
-          toolCall.name,
-          toolCall.input,
-        );
+        const toolResult = await executeTool(toolCall.name, toolCall.input);
 
         onChunk(`\n[Tool: ${toolCall.name}] → ${toolResult}\n`);
 
@@ -212,14 +202,14 @@ export async function runAgentLoop(
       continue;
     }
 
-    // Old text-based parser fallback for providers without native tools.
-    const toolCall = parseToolCall(fullResponse);
+    // Text-based fallback for providers without native tools
+    const toolCall = parseToolCall(response.content);
 
     if (toolCall?.invalid) {
       history.push({
         role: "user",
         content:
-          "Your response contained multiple tool calls.Please use ONLY ONE tool call in your response. Do not provide tool results yourself. Wait for the actual tool result before continuing.",
+          "Your response contained multiple tool calls. Please use ONLY ONE tool call in your response. Do not provide tool results yourself. Wait for the actual tool result before continuing.",
       });
 
       continue;
@@ -272,4 +262,3 @@ export async function runAgentLoop(
     }
   }
 }
- 
