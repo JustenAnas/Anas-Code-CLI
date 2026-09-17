@@ -18,8 +18,15 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const { mode = "agent", verbose = false, provider: providerName = "openrouter" } = options;
   const provider = createProvider(providerName);
   const context = await buildProjectContext();
-  console.log("DEBUG context length:", context.length);
+  
   const history: Message[] = [];
+
+  if (context) {
+  history.push({
+    role: "assistant", 
+    content: `I have scanned your project structure:${context}`,
+  });
+}
 
   console.log(fmt.mode(`Chat started · provider: ${provider.name} · mode: ${mode}`));
   console.log(fmt.dim("Type /help for commands, /exit to quit.\n"));
@@ -58,7 +65,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           firstChunk = false;
         }
         process.stdout.write(chunk);
-      }, context, verbose);
+      }, "", verbose);
 
       console.log();
     } catch (error) {

@@ -2,7 +2,7 @@ import chalk from "chalk";
 
 export const fmt = {
   system: (text: string) => chalk.gray(text),
-  assistant: (text: string) => chalk.cyan(text),
+  assistant: (text: string) => chalk.hex("#fb7185")(text),
   tool: (text: string) => chalk.yellow(text),
   toolResult: (text: string) => chalk.dim.green(text),
   success: (text: string) => chalk.green(text),

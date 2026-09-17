@@ -161,17 +161,18 @@ export async function runAgentLoop(
     let response;
 
     try {
-      const fullSystemPrompt = context
-        ? `${SYSTEM_PROMPT}${context}`
-        : SYSTEM_PROMPT;
+      const fullSystemPrompt = SYSTEM_PROMPT;
 
       response = await provider.sendMessage(history, fullSystemPrompt);
 
       if (response.content) onChunk(response.content);
 
-      if (verbose && response.inputTokens) {
-        onChunk(fmt.dim(`\n[Tokens: ${response.inputTokens} in, ${response.outputTokens} out]\n`));
-      }
+      if (response.inputTokens) {
+  const inputCost = (response.inputTokens * 2.50) / 1_000_000;
+  const outputCost = ((response.outputTokens ?? 0) * 10.00) / 1_000_000;
+  const totalCost = inputCost + outputCost;
+  onChunk(fmt.dim(`\n[Tokens: ${response.inputTokens} in · ${response.outputTokens ?? 0} out · $${totalCost.toFixed(6)}]\n`));
+}
     } catch (error) {
       throw error;
     }

@@ -12,6 +12,10 @@ import { config } from "../config/user-config.js";
 
 const PROVIDERS: ProviderName[] = ["claude", "openai", "openrouter", "gemini"];
 
+type WakeUpOptions = {
+  verbose?: boolean;
+};
+
 async function runDoctor(): Promise<void> {
   await checkEnvironment();
 }
@@ -37,7 +41,9 @@ async function selectProvider(): Promise<ProviderName> {
   return provider;
 }
 
-export async function wakeUp(): Promise<void> {
+export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
+  const { verbose = false } = options;
+
   printBanner();
   console.log();
 
@@ -54,16 +60,16 @@ export async function wakeUp(): Promise<void> {
   printModePanels();
 
   const mode = await select<CliMode>({
-  message: "Choose a mode to start:",
-  choices: CLI_MODES.map((value) => ({
-    name: `${value} — ${MODE_DESCRIPTIONS[value]}`,
-    value,
-  })),
-  default: config.get("mode"),
-});
+    message: "Choose a mode to start:",
+    choices: CLI_MODES.map((value) => ({
+      name: `${value} — ${MODE_DESCRIPTIONS[value]}`,
+      value,
+    })),
+    default: config.get("mode"),
+  });
 
-config.set("mode", mode);
+  config.set("mode", mode);
 
   console.log();
-  await startChat({ mode, provider });
+  await startChat({ mode, provider, verbose });
 }
