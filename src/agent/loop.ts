@@ -6,6 +6,7 @@ import { globTool } from "../tools/glob.js";
 import { parseToolCall } from "./tool-parser.js";
 import { listDirTool } from "../tools/list-dir.js";
 import { editFileTool } from "../tools/edit-file.js";
+import { fmt } from "../ui/format.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
@@ -146,6 +147,8 @@ export async function runAgentLoop(
   provider: BaseProvider,
   history: Message[],
   onChunk: (chunk: string) => void,
+  context: string = "",
+  verbose: boolean = false,
 ): Promise<void> {
   history.push({ role: "user", content: prompt });
 
@@ -158,8 +161,17 @@ export async function runAgentLoop(
     let response;
 
     try {
-      response = await provider.sendMessage(history, SYSTEM_PROMPT);
+      const fullSystemPrompt = context
+        ? `${SYSTEM_PROMPT}${context}`
+        : SYSTEM_PROMPT;
+
+      response = await provider.sendMessage(history, fullSystemPrompt);
+
       if (response.content) onChunk(response.content);
+
+      if (verbose && response.inputTokens) {
+        onChunk(fmt.dim(`\n[Tokens: ${response.inputTokens} in, ${response.outputTokens} out]\n`));
+      }
     } catch (error) {
       throw error;
     }

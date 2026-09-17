@@ -5,7 +5,8 @@ import { createProvider, type ProviderName } from "../providers/factory.js";
 import { startSpinner, stopSpinner } from "../ui/spinner.js";
 import { SLASH_COMMANDS } from "../config/constants.js";
 import type { Message } from "../providers/base.js";
-import { runAgentLoop, SYSTEM_PROMPT } from "../agent/loop.js";
+import { runAgentLoop } from "../agent/loop.js";
+import { buildProjectContext } from "../agent/context.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -16,6 +17,8 @@ export type ChatOptions = {
 export async function startChat(options: ChatOptions = {}): Promise<void> {
   const { mode = "agent", verbose = false, provider: providerName = "openrouter" } = options;
   const provider = createProvider(providerName);
+  const context = await buildProjectContext();
+  console.log("DEBUG context length:", context.length);
   const history: Message[] = [];
 
   console.log(fmt.mode(`Chat started · provider: ${provider.name} · mode: ${mode}`));
@@ -43,8 +46,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       continue;
     }
 
-    // history.push({ role: "user", content: trimmed });/
-
     startSpinner("Thinking…");
 
     try {
@@ -57,7 +58,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           firstChunk = false;
         }
         process.stdout.write(chunk);
-      });
+      }, context, verbose);
 
       console.log();
     } catch (error) {
