@@ -65,7 +65,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           firstChunk = false;
         }
         process.stdout.write(chunk);
-      }, "", verbose);
+      }, "", verbose,mode);
 
       console.log();
     } catch (error) {

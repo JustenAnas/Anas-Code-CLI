@@ -8,6 +8,7 @@ import { listDirTool } from "../tools/list-dir.js";
 import { editFileTool } from "../tools/edit-file.js";
 import { fmt } from "../ui/format.js";
 import { promptBeforeToolUse } from "./permission.js";
+import type { CliMode } from "./modes.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
@@ -123,6 +124,18 @@ export const TOOLS = [
   },
 ];
 
+const AGENT_TOOLS = ["read_file", "write_file", "edit_file", "bash", "glob", "list_dir"];
+const ASK_TOOLS = ["read_file", "glob", "list_dir"];
+const PLAN_TOOLS: string[] = [];
+
+function getAllowedTools(mode: CliMode): string[] {
+  switch (mode) {
+    case "agent": return AGENT_TOOLS;
+    case "ask": return ASK_TOOLS;
+    case "plan": return PLAN_TOOLS;
+  }
+}
+
 async function executeTool(
   name: string,
   input: Record<string, string>,
@@ -182,6 +195,7 @@ export async function runAgentLoop(
   onChunk: (chunk: string) => void,
   context: string = "",
   verbose: boolean = false,
+  mode: CliMode = "agent",
 ): Promise<void> {
   history.push({ role: "user", content: prompt });
 
@@ -195,7 +209,11 @@ export async function runAgentLoop(
     let response;
 
     try {
-      const fullSystemPrompt = SYSTEM_PROMPT;
+     const fullSystemPrompt = mode === "plan"
+  ? `${SYSTEM_PROMPT}\n\nYou are in PLAN mode. Do NOT use any tools. Do NOT write any code. Instead, provide a concise high-level plan — what folders to create, what files to make, what each file's purpose is, and what commands to run. Maximum 15 lines. No code blocks.`
+  : mode === "ask"
+  ? `${SYSTEM_PROMPT}\n\nYou are in ASK mode. You can only read files, not create or modify them. Answer questions about the codebase using read_file, glob, and list_dir only.`
+  : SYSTEM_PROMPT;
 
       const trimmedHistory = trimHistory(history);
       response = await provider.sendMessage(trimmedHistory, fullSystemPrompt);
@@ -215,6 +233,23 @@ export async function runAgentLoop(
     // Native tool calling
     if (response.toolCall) {
       const toolCall = response.toolCall;
+      const allowedTools = getAllowedTools(mode);
+
+      if (!allowedTools.includes(toolCall.name)) {
+        onChunk(`\n[Blocked: ${toolCall.name} not allowed in ${mode} mode]\n`);
+        history.push({
+          role: "assistant",
+          content: response.content,
+          toolCall,
+        });
+        history.push({
+          role: "tool",
+          content: `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${allowedTools.join(", ") || "none"}.`,
+          toolCallId: toolCall.id,
+        });
+
+        continue;
+      }
 
       onChunk(`\n[Using tool: ${toolCall.name}]\n`);
 
