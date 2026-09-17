@@ -7,23 +7,25 @@ import { parseToolCall } from "./tool-parser.js";
 import { listDirTool } from "../tools/list-dir.js";
 import { editFileTool } from "../tools/edit-file.js";
 import { fmt } from "../ui/format.js";
+import { promptBeforeToolUse } from "./permission.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
-- read_file(path): Read a file's contents
-- write_file(path, content): Create or overwrite a file
-- edit_file(path, oldStr, newStr): Edit a specific part of a file by replacing exact text — use this instead of write_file when modifying existing files
-- bash(command): Run a terminal command
-- glob(pattern): Find files matching a pattern
-- list_dir(path): List files in a directory
+* read_file(path): Read a file's contents
+* write_file(path, content): Create or overwrite a file
+* edit_file(path, oldStr, newStr): Edit a specific part of a file by replacing exact text — use this instead of write_file when modifying existing files
+* bash(command): Run a terminal command
+* glob(pattern): Find files matching a glob pattern
+* list_dir(path): List files in a directory
 
 IMPORTANT: The bash tool runs on Windows CMD, not Linux or Unix.
-- Use Windows CMD-compatible commands only.
-- Do not use Unix/Linux flags such as "mkdir -p".
-- For creating directories, use "mkdir folder\\subfolder".
-- For paths in bash commands, use Windows-compatible paths such as "agent-test\\test-folder".
-- Do not use "./" paths inside bash commands.
-- The ./ path format is still required for read_file, write_file, edit_file, glob, and list_dir.
+
+* Use Windows CMD-compatible commands only.
+* Do not use Unix/Linux flags such as "mkdir -p".
+* For creating directories, use "mkdir folder\subfolder".
+* For paths in bash commands, use Windows-compatible paths such as "agent-test\test-folder".
+* Do not use "./" paths inside bash commands.
+* The ./ path format is still required for read_file, write_file, edit_file, glob, and list_dir.
 
 When you need to use a tool, use the provided tool directly.
 Do not write tool calls as text, XML, JSON, or <tool_call> tags.
@@ -34,12 +36,13 @@ Always use relative paths starting with ./ (e.g. ./folder/file.ts), never absolu
 For bash commands, follow the Windows CMD rules above.
 
 When working on a folder structure:
-- First explore with list_dir and glob
-- Create new files with write_file
-- Modify existing files with edit_file, never rewrite the whole file unless necessary
-- Read files after writing to verify correctness
-- Use bash only when needed (installing packages, creating directories)
-- After everything is done, read all files and fix anything incorrect
+
+* First explore with list_dir and glob
+* Create new files with write_file
+* Modify existing files with edit_file, never rewrite the whole file unless necessary
+* Read files after writing to verify correctness
+* Use bash only when needed (installing packages, creating directories)
+* After everything is done, read all files and fix anything incorrect
 
 When you are done with all tool calls, give your final response normally. Be concise and clear.
 
@@ -124,6 +127,12 @@ async function executeTool(
   name: string,
   input: Record<string, string>,
 ): Promise<string> {
+  const permission = await promptBeforeToolUse(name, input);
+
+  if (permission.behavior === "deny") {
+    return permission.message;
+  }
+
   switch (name) {
     case "read_file":
       return readFileTool(input.path);
@@ -142,6 +151,30 @@ async function executeTool(
   }
 }
 
+function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
+  if (history.length <= maxMessages) return history;
+
+  // always keep first message (user's original task)
+  const first = history[0];
+  const rest = history.slice(1);
+
+  // trim from the front but never split tool call pairs
+  let trimmed = rest;
+  while (trimmed.length > maxMessages - 1) {
+    const first = trimmed[0];
+    const second = trimmed[1];
+
+    // if first is assistant with tool call, remove it AND its tool result together
+    if (first?.role === "assistant" && first?.toolCall && second?.role === "tool") {
+      trimmed = trimmed.slice(2);
+    } else {
+      trimmed = trimmed.slice(1);
+    }
+  }
+
+  return [first, ...trimmed];
+}
+
 export async function runAgentLoop(
   prompt: string,
   provider: BaseProvider,
@@ -152,27 +185,29 @@ export async function runAgentLoop(
 ): Promise<void> {
   history.push({ role: "user", content: prompt });
 
-  const MAX_ITERATIONS = 20;
+  const MAX_ITERATIONS = 200;
   let iterations = 0;
 
   while (iterations < MAX_ITERATIONS) {
     iterations++;
+
 
     let response;
 
     try {
       const fullSystemPrompt = SYSTEM_PROMPT;
 
-      response = await provider.sendMessage(history, fullSystemPrompt);
+      const trimmedHistory = trimHistory(history);
+      response = await provider.sendMessage(trimmedHistory, fullSystemPrompt);
 
       if (response.content) onChunk(response.content);
 
       if (response.inputTokens) {
-  const inputCost = (response.inputTokens * 2.50) / 1_000_000;
-  const outputCost = ((response.outputTokens ?? 0) * 10.00) / 1_000_000;
-  const totalCost = inputCost + outputCost;
-  onChunk(fmt.dim(`\n[Tokens: ${response.inputTokens} in · ${response.outputTokens ?? 0} out · $${totalCost.toFixed(6)}]\n`));
-}
+        const inputCost = (response.inputTokens * 2.50) / 1_000_000;
+        const outputCost = ((response.outputTokens ?? 0) * 10.00) / 1_000_000;
+        const totalCost = inputCost + outputCost;
+        onChunk(fmt.dim(`\n[Tokens: ${response.inputTokens} in · ${response.outputTokens ?? 0} out · $${totalCost.toFixed(6)}]\n`));
+      }
     } catch (error) {
       throw error;
     }
@@ -273,5 +308,6 @@ export async function runAgentLoop(
         content: `Tool error: ${errorMessage}. Please try again.`,
       });
     }
+
   }
 }
