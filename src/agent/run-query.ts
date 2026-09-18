@@ -17,6 +17,7 @@ export async function runQuery(prompt: string, options: RunQueryOptions = {}) {
     );
     console.log();
   } catch (error) {
-    console.error(chalk.red("Error: "), error);
-  }
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(chalk.red(`Error: ${message}`));
+}
 }
