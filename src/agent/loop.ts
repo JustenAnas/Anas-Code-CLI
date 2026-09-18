@@ -9,6 +9,7 @@ import { editFileTool } from "../tools/edit-file.js";
 import { fmt } from "../ui/format.js";
 import { promptBeforeToolUse } from "./permission.js";
 import type { CliMode } from "./modes.js";
+import { gitTool } from "../tools/git.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
@@ -122,9 +123,24 @@ export const TOOLS = [
       required: ["path", "oldStr", "newStr"],
     },
   },
+  {
+  name: "git",
+  description: "Inspect Git repository state",
+  input_schema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["status", "diff", "log", "branch"],
+        description: "The Git action to perform",
+      },
+    },
+    required: ["action"],
+  },
+},
 ];
 
-const AGENT_TOOLS = ["read_file", "write_file", "edit_file", "bash", "glob", "list_dir"];
+const AGENT_TOOLS = ["read_file", "write_file", "edit_file", "bash", "glob", "list_dir", "git"];
 const ASK_TOOLS = ["read_file", "glob", "list_dir"];
 const PLAN_TOOLS: string[] = [];
 
@@ -159,6 +175,8 @@ async function executeTool(
       return listDirTool(input.path);
     case "edit_file":
       return editFileTool(input.path, input.oldStr, input.newStr);
+    case "git":
+      return gitTool(input.action as "status" | "diff" | "log" | "branch");
     default:
       return `Unknown tool: ${name}`;
   }

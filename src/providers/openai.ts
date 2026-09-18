@@ -94,6 +94,24 @@ const TOOLS = [
     },
   },
 },
+{
+  type: "function" as const,
+  function: {
+    name: "git",
+    description: "Inspect Git repository state",
+    parameters: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["status", "diff", "log", "branch"],
+          description: "The Git action to perform",
+        },
+      },
+      required: ["action"],
+    },
+  },
+},
 ];
 
 export class OpenAIProvider implements BaseProvider {
