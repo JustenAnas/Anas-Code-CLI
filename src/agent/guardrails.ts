@@ -1,4 +1,3 @@
-
 const PROTECTED_FILE_PATTERNS = [
   /^\.env$/i,
   /^\.env\..+$/i,
@@ -10,10 +9,7 @@ const PROTECTED_FILE_PATTERNS = [
   /^secrets?\./i,
 ];
 
-const PROTECTED_DIRECTORIES = [
-  "node_modules",
-  ".git",
-];
+const PROTECTED_DIRECTORIES = ["node_modules", ".git"];
 
 const RESTRICTED_PROJECT_FILES = [
   "package.json",
@@ -21,8 +17,6 @@ const RESTRICTED_PROJECT_FILES = [
   "yarn.lock",
   "pnpm-lock.yaml",
 ];
-
- 
 
 const SECRET_PATTERNS = [
   // Environment/config secrets
@@ -55,8 +49,6 @@ export function redactSecrets(text: string): string {
   return redacted;
 }
 
-
-
 const INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?previous\s+instructions/i,
   /ignore\s+(all\s+)?prior\s+instructions/i,
@@ -80,14 +72,11 @@ const ABUSIVE_PATTERNS = [
 export type GuardrailResult = {
   allowed: boolean;
   reason?: string;
-warning?: string;
+  warning?: string;
 };
 
- 
 export function isProtectedPath(path: string): GuardrailResult {
-  const normalized = path
-    .replace(/\\/g, "/")
-    .replace(/^\.\/+/, "");
+  const normalized = path.replace(/\\/g, "/").replace(/^\.\/+/, "");
 
   const parts = normalized.split("/").filter(Boolean);
   const fileName = parts.at(-1) ?? "";
@@ -96,7 +85,7 @@ export function isProtectedPath(path: string): GuardrailResult {
     return {
       allowed: false,
       reason: `Protected directory: ${parts.find((part) =>
-        PROTECTED_DIRECTORIES.includes(part)
+        PROTECTED_DIRECTORIES.includes(part),
       )}`,
     };
   }
@@ -135,14 +124,12 @@ export function allowsRestrictedFileChange(userPrompt: string): boolean {
   return intentPatterns.some((pattern) => pattern.test(prompt));
 }
 
-
 export function containsSecret(text: string): boolean {
   return SECRET_PATTERNS.some((pattern) => {
     pattern.lastIndex = 0;
     return pattern.test(text);
   });
 }
- 
 
 export function containsPromptInjection(text: string): boolean {
   return INJECTION_PATTERNS.some((pattern) => pattern.test(text));
@@ -186,25 +173,25 @@ export function inputGuardrail(input: string): GuardrailResult {
   }
 
   if (trimmed.length > 100_000) {
-  return {
-    allowed: false,
-    reason: "Input is too large.",
-  };
-}
+    return {
+      allowed: false,
+      reason: "Input is too large.",
+    };
+  }
 
   if (trimmed.length > 50_000) {
-  return {
-    allowed: true,
-    warning: "Large input detected. This may use a significant amount of context.",
-  };
-}
-
-  
+    return {
+      allowed: true,
+      warning:
+        "Large input detected. This may use a significant amount of context.",
+    };
+  }
 
   if (containsAbusiveLanguage(trimmed)) {
     return {
       allowed: false,
-      reason: "Abusive language is not allowed.You may get banned if you keep using this language",
+      reason:
+        "Abusive language is not allowed.You may get banned if you keep using this language",
     };
   }
 
@@ -235,4 +222,3 @@ export function outputGuardrail(output: string): GuardrailResult {
 
   return { allowed: true };
 }
-

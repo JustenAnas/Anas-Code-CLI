@@ -1,4 +1,3 @@
-
 export type Message = {
   role: "user" | "assistant" | "tool";
   content: string;
@@ -32,4 +31,15 @@ export interface BaseProvider {
     onChunk: (chunk: string) => void,
     systemPrompt?: string,
   ): Promise<ProviderResponse>;
+}
+
+export class ProviderError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly retryable: boolean = false,
+  ) {
+    super(message);
+    this.name = "ProviderError";
+  }
 }

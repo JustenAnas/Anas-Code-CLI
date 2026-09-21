@@ -1,4 +1,3 @@
-
 import {
   GoogleGenerativeAI,
   SchemaType,
@@ -279,4 +278,3 @@ export class GeminiProvider implements BaseProvider {
     );
   }
 }
- 

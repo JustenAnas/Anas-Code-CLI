@@ -1,4 +1,3 @@
-
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { dirname } from "path";
 import {
@@ -9,7 +8,7 @@ import {
 export async function writeFileTool(
   path: string,
   content: string,
-  userPrompt: string
+  userPrompt: string,
 ): Promise<string> {
   const guardrail = isProtectedPath(path);
 
@@ -34,4 +33,3 @@ export async function writeFileTool(
     }`;
   }
 }
-

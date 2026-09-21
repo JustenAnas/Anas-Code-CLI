@@ -107,7 +107,7 @@ export class OpenRouterProvider implements BaseProvider {
     apiKey: string,
     // model = "meta-llama/llama-3.1-8b-instruct",
     // model = "google/gemma-4-26b-a4b-it:free",
-       model = "nvidia/nemotron-3-super-120b-a12b:free"
+    model = "nvidia/nemotron-3-super-120b-a12b:free",
   ) {
     this.client = new OpenAI({
       apiKey,
@@ -255,9 +255,7 @@ export class OpenRouterProvider implements BaseProvider {
         const endIndex = pendingText.indexOf("</tool_call>");
 
         if (endIndex !== -1) {
-          pendingText = pendingText.slice(
-            endIndex + "</tool_call>".length,
-          );
+          pendingText = pendingText.slice(endIndex + "</tool_call>".length);
 
           hidingToolText = false;
         } else {
@@ -276,18 +274,14 @@ export class OpenRouterProvider implements BaseProvider {
           onChunk(beforeTool);
         }
 
-        pendingText = pendingText.slice(
-          toolStart + "<tool_call>".length,
-        );
+        pendingText = pendingText.slice(toolStart + "<tool_call>".length);
 
         hidingToolText = true;
 
         const endIndex = pendingText.indexOf("</tool_call>");
 
         if (endIndex !== -1) {
-          pendingText = pendingText.slice(
-            endIndex + "</tool_call>".length,
-          );
+          pendingText = pendingText.slice(endIndex + "</tool_call>".length);
 
           hidingToolText = false;
         } else {

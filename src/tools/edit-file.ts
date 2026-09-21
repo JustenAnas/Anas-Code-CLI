@@ -1,4 +1,3 @@
-
 import { readFile, writeFile } from "fs/promises";
 import {
   isProtectedPath,
@@ -9,7 +8,7 @@ export async function editFileTool(
   path: string,
   oldStr: string,
   newStr: string,
-  userPrompt: string
+  userPrompt: string,
 ): Promise<string> {
   const guardrail = isProtectedPath(path);
 
@@ -40,4 +39,3 @@ export async function editFileTool(
     }`;
   }
 }
-

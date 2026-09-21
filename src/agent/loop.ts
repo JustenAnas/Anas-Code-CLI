@@ -1,4 +1,8 @@
-import type { BaseProvider, Message } from "../providers/base.js";
+import {
+  ProviderError,
+  type BaseProvider,
+  type Message,
+} from "../providers/base.js";
 import { readFileTool } from "../tools/read-file.js";
 import { writeFileTool } from "../tools/write-file.js";
 import { bashTool } from "../tools/bash.js";
@@ -313,6 +317,45 @@ function trimHistory(
   return [first, ...trimmed];
 }
 
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  onRetry?: (attempt: number, error: string) => void,
+): Promise<T> {
+  let lastError: Error = new Error("Unknown error");
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (error instanceof ProviderError) {
+        if (!error.retryable) {
+          throw error;
+        }
+
+        // 500: retry only once.
+        if (error.status === 500 && attempt >= 2) {
+          throw error;
+        }
+      }
+
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+
+      const waitMs = Math.pow(2, attempt - 1) * 1000;
+
+      onRetry?.(attempt, lastError.message);
+
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+
+  throw lastError;
+}
+
 export async function runAgentLoop(
   prompt: string,
   provider: BaseProvider,
@@ -355,10 +398,17 @@ export async function runAgentLoop(
             : SYSTEM_PROMPT;
 
       const trimmedHistory = trimHistory(history);
-      response = await provider.sendMessage(
-        trimmedHistory,
-        fullSystemPrompt,
-      );
+      response = await withRetry(
+  () => provider.sendMessage(trimmedHistory, fullSystemPrompt),
+  3,
+  (attempt, error) => {
+    onChunk(
+      fmt.error(
+        `\n[Retry ${attempt}/3] ${error} — retrying...\n`,
+      ),
+    );
+  },
+);
 
       if (response.content) {
         const outputGuard = outputGuardrail(response.content);
@@ -407,13 +457,13 @@ export async function runAgentLoop(
   }
 
   // recoverable errors — tell the model and continue
-  onChunk(fmt.error(`\n[Error] ${message} — retrying...\n`));
+  onChunk(fmt.error(`\n[Error] ${message}\n`));
   history.push({
     role: "user",
     content: `There was an error: ${message}. Please try again.`,
   });
 
-  continue;
+  break;
 }
 
     // Native tool calling
@@ -524,7 +574,10 @@ export async function runAgentLoop(
       if (toolResult.startsWith("Error ")) {
         history.push({
           role: "user",
-          content: `Tool error: ${toolResult}. Fix the tool call and try again.`,
+          content: `Tool error: ${toolResult}
+
+Do NOT repeat the exact same tool call.
+Analyze the error, determine what was wrong, and try a corrected tool call if possible.`,
         });
 
         continue;

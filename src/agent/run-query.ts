@@ -11,13 +11,12 @@ export async function runQuery(prompt: string, options: RunQueryOptions = {}) {
   try {
     const provider = createProvider(options.provider ?? "openrouter");
 
-    await provider.streamMessage(
-      [{ role: "user", content: prompt }],
-      (chunk) => process.stdout.write(chunk)
+    await provider.streamMessage([{ role: "user", content: prompt }], (chunk) =>
+      process.stdout.write(chunk),
     );
     console.log();
   } catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(chalk.red(`Error: ${message}`));
-}
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(chalk.red(`Error: ${message}`));
+  }
 }

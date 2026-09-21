@@ -1,4 +1,3 @@
- 
 import { execa } from "execa";
 
 export async function bashTool(command: string): Promise<string> {
@@ -36,4 +35,3 @@ export async function bashTool(command: string): Promise<string> {
     }`;
   }
 }
- 

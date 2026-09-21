@@ -15,20 +15,26 @@ export type ChatOptions = {
 };
 
 export async function startChat(options: ChatOptions = {}): Promise<void> {
-  const { mode = "agent", verbose = false, provider: providerName = "openrouter" } = options;
+  const {
+    mode = "agent",
+    verbose = false,
+    provider: providerName = "openrouter",
+  } = options;
   const provider = createProvider(providerName);
   const context = await buildProjectContext();
-  
+
   const history: Message[] = [];
 
   if (context) {
-  history.push({
-    role: "assistant", 
-    content: `I have scanned your project structure:${context}`,
-  });
-}
+    history.push({
+      role: "assistant",
+      content: `I have scanned your project structure:${context}`,
+    });
+  }
 
-  console.log(fmt.mode(`Chat started · provider: ${provider.name} · mode: ${mode}`));
+  console.log(
+    fmt.mode(`Chat started · provider: ${provider.name} · mode: ${mode}`),
+  );
   console.log(fmt.dim("Type /help for commands, /exit to quit.\n"));
 
   let running = true;
@@ -58,19 +64,29 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
     try {
       let firstChunk = true;
 
-      await runAgentLoop(trimmed, provider, history, (chunk) => {
-        if (firstChunk) {
-          stopSpinner();
-          process.stdout.write(fmt.assistant("Assistant: "));
-          firstChunk = false;
-        }
-        process.stdout.write(chunk);
-      }, "", verbose,mode);
+      await runAgentLoop(
+        trimmed,
+        provider,
+        history,
+        (chunk) => {
+          if (firstChunk) {
+            stopSpinner();
+            process.stdout.write(fmt.assistant("Assistant: "));
+            firstChunk = false;
+          }
+          process.stdout.write(chunk);
+        },
+        "",
+        verbose,
+        mode,
+      );
 
       console.log();
     } catch (error) {
       stopSpinner();
-      console.error(fmt.error(`Error: ${error instanceof Error ? error.message : error}`));
+      console.error(
+        fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
+      );
     }
   }
 

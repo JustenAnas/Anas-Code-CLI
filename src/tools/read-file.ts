@@ -1,4 +1,3 @@
-
 import { readFile } from "fs/promises";
 import { redactSecrets } from "../agent/guardrails.js";
 
@@ -14,4 +13,3 @@ export async function readFileTool(path: string): Promise<string> {
     }`;
   }
 }
-

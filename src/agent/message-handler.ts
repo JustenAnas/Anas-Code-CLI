@@ -9,7 +9,7 @@
 //   function contentToString(content: unknown): string {
 //     if (typeof content === "string") return content;
 //     if (!Array.isArray(content)) return String(content ?? "");
-  
+
 //     return content
 //       .map((block) => {
 //         if (typeof block !== "object" || block === null) return "";
@@ -55,7 +55,7 @@
 //               }
 //               break;
 //         }
-        
+
 //         case "assistant":{
 //             const content = message.message.content;
 //       const text = contentToString(content);
@@ -88,7 +88,6 @@
 //             break;
 //         }
 
-
 //         case "result":{
 //             stopSpinner();
 
@@ -112,11 +111,9 @@
 //               break;
 //         }
 
-//         default: 
+//         default:
 //             break;
-        
-        
-        
+
 //     }
 //   }
 import { fmt, truncate } from "../ui/format.js";
@@ -125,6 +122,9 @@ export type MessageHandlerOptions = {
   verbose?: boolean;
 };
 
-export function handleMessage(message: string, options: MessageHandlerOptions = {}): void {
+export function handleMessage(
+  message: string,
+  options: MessageHandlerOptions = {},
+): void {
   console.log(fmt.assistant(message));
 }

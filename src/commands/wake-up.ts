@@ -23,8 +23,14 @@ async function runDoctor(): Promise<void> {
 function printModePanels(): void {
   for (const mode of CLI_MODES) {
     const panel = boxen(
-      chalk.bold(mode.toUpperCase()) + "\n\n" + chalk.dim(MODE_DESCRIPTIONS[mode]),
-      { padding: 1, borderColor: mode === "agent" ? "green" : mode === "ask" ? "blue" : "yellow" }
+      chalk.bold(mode.toUpperCase()) +
+        "\n\n" +
+        chalk.dim(MODE_DESCRIPTIONS[mode]),
+      {
+        padding: 1,
+        borderColor:
+          mode === "agent" ? "green" : mode === "ask" ? "blue" : "yellow",
+      },
     );
     console.log(panel);
   }
@@ -50,7 +56,9 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
   try {
     await runDoctor();
   } catch (error) {
-    console.error(fmt.error(error instanceof Error ? error.message : String(error)));
+    console.error(
+      fmt.error(error instanceof Error ? error.message : String(error)),
+    );
     process.exit(1);
   }
 

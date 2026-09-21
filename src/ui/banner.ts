@@ -7,7 +7,7 @@ export function printBanner() {
   const panel = boxen(
     chalk.cyan("Multi-provider AI coding CLI\n") +
       chalk.dim("Full Production Ready"),
-    { padding: 1, borderColor: "cyan" }
+    { padding: 1, borderColor: "cyan" },
   );
 
   console.log(title);

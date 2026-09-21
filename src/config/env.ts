@@ -6,7 +6,7 @@ export function requireApiKey(): string {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     throw new Error(
-      "Missing ANTHROPIC_API_KEY. Copy .env.example to .env and add your key."
+      "Missing ANTHROPIC_API_KEY. Copy .env.example to .env and add your key.",
     );
   }
   return key;
@@ -14,7 +14,10 @@ export function requireApiKey(): string {
 
 export async function checkEnvironment(): Promise<void> {
   const { stdout } = await execa("node", ["-v"]);
-  const major = parseInt(stdout.trim().replace(/^v/, "").split(".")[0] ?? "0", 10);
+  const major = parseInt(
+    stdout.trim().replace(/^v/, "").split(".")[0] ?? "0",
+    10,
+  );
 
   if (major < 18) {
     throw new Error(`Node.js 18+ required (found ${stdout.trim()})`);

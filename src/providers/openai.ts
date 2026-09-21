@@ -1,9 +1,10 @@
 import OpenAI from "openai";
-import type {
-  BaseProvider,
-  Message,
-  ProviderResponse,
-  ToolCall,
+import {
+  ProviderError,
+  type BaseProvider,
+  type Message,
+  type ProviderResponse,
+  type ToolCall,
 } from "./base.js";
 
 const TOOLS = [
@@ -58,7 +59,10 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          pattern: { type: "string", description: "The file pattern to search for" },
+          pattern: {
+            type: "string",
+            description: "The file pattern to search for",
+          },
         },
         required: ["pattern"],
       },
@@ -79,39 +83,45 @@ const TOOLS = [
     },
   },
   {
-  type: "function" as const,
-  function: {
-    name: "edit_file",
-    description: "Edit a specific part of a file by replacing exact text",
-    parameters: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "The file path to edit" },
-        oldStr: { type: "string", description: "The exact text to find and replace" },
-        newStr: { type: "string", description: "The new text to replace it with" },
-      },
-      required: ["path", "oldStr", "newStr"],
-    },
-  },
-},
-{
-  type: "function" as const,
-  function: {
-    name: "git",
-    description: "Inspect Git repository state",
-    parameters: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["status", "diff", "log", "branch"],
-          description: "The Git action to perform",
+    type: "function" as const,
+    function: {
+      name: "edit_file",
+      description: "Edit a specific part of a file by replacing exact text",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "The file path to edit" },
+          oldStr: {
+            type: "string",
+            description: "The exact text to find and replace",
+          },
+          newStr: {
+            type: "string",
+            description: "The new text to replace it with",
+          },
         },
+        required: ["path", "oldStr", "newStr"],
       },
-      required: ["action"],
     },
   },
-},
+  {
+    type: "function" as const,
+    function: {
+      name: "git",
+      description: "Inspect Git repository state",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["status", "diff", "log", "branch"],
+            description: "The Git action to perform",
+          },
+        },
+        required: ["action"],
+      },
+    },
+  },
 ];
 
 export class OpenAIProvider implements BaseProvider {
@@ -170,149 +180,193 @@ export class OpenAIProvider implements BaseProvider {
   }
 
   async sendMessage(
-  messages: Message[],
-  systemPrompt?: string,
-): Promise<ProviderResponse> {
-  try {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: this.buildMessages(messages, systemPrompt),
-      tools: TOOLS,
-    });
+    messages: Message[],
+    systemPrompt?: string,
+  ): Promise<ProviderResponse> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: this.buildMessages(messages, systemPrompt),
+        tools: TOOLS,
+      });
 
-    const message = response.choices[0].message;
-    const toolCall = message.tool_calls?.[0];
+      const message = response.choices[0].message;
+      const toolCall = message.tool_calls?.[0];
 
-    if (toolCall && toolCall.type === "function") {
+      if (toolCall && toolCall.type === "function") {
+        return {
+          content: message.content ?? "",
+          toolCall: {
+            id: toolCall.id,
+            name: toolCall.function.name,
+            input: JSON.parse(toolCall.function.arguments || "{}"),
+          },
+          inputTokens: response.usage?.prompt_tokens,
+          outputTokens: response.usage?.completion_tokens,
+        };
+      }
+
       return {
         content: message.content ?? "",
-        toolCall: {
-          id: toolCall.id,
-          name: toolCall.function.name,
-          input: JSON.parse(toolCall.function.arguments || "{}"),
-        },
         inputTokens: response.usage?.prompt_tokens,
         outputTokens: response.usage?.completion_tokens,
       };
-    }
-
-    return {
-      content: message.content ?? "",
-      inputTokens: response.usage?.prompt_tokens,
-      outputTokens: response.usage?.completion_tokens,
-    };
-  } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      if (error.status === 401) {
-        throw new Error("Invalid OpenAI API key.");
-      }
-
-      if (error.status === 429) {
-        throw new Error(
-          "OpenAI rate limit exceeded or insufficient credits.",
-        );
-      }
-
-      if (error.status === 400) {
-        throw new Error(`OpenAI request error: ${error.message}`);
-      }
-
-      throw new Error(
-        `OpenAI API error (${error.status}): ${error.message}`,
+    } catch (error) {
+  if (error instanceof OpenAI.APIError) {
+    if (error.status === 401) {
+      throw new ProviderError(
+        "Invalid OpenAI API key.",
+        401,
+        false,
       );
     }
 
-    throw new Error(
-      `Network or connection error: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+    if (error.status === 429) {
+      throw new ProviderError(
+        "OpenAI rate limit exceeded.",
+        429,
+        true,
+      );
+    }
+
+    if (error.status === 400) {
+      throw new ProviderError(
+        `OpenAI request error: ${error.message}`,
+        400,
+        false,
+      );
+    }
+
+    if (error.status === 500) {
+      throw new ProviderError(
+        `OpenAI API error (500): ${error.message}`,
+        500,
+        true,
+      );
+    }
+
+    throw new ProviderError(
+      `OpenAI API error (${error.status}): ${error.message}`,
+      error.status,
+      false,
     );
   }
+
+  throw new ProviderError(
+    `Network or connection error: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+    undefined,
+    true,
+  );
 }
+  }
 
- async streamMessage(
-  messages: Message[],
-  onChunk: (chunk: string) => void,
-  systemPrompt?: string,
-): Promise<ProviderResponse> {
-  try {
-    let fullContent = "";
-    let toolCallId = "";
-    let toolCallName = "";
-    let toolCallArguments = "";
+  async streamMessage(
+    messages: Message[],
+    onChunk: (chunk: string) => void,
+    systemPrompt?: string,
+  ): Promise<ProviderResponse> {
+    try {
+      let fullContent = "";
+      let toolCallId = "";
+      let toolCallName = "";
+      let toolCallArguments = "";
 
-    const stream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: this.buildMessages(messages, systemPrompt),
-      tools: TOOLS,
-      stream: true,
-    });
+      const stream = await this.client.chat.completions.create({
+        model: this.model,
+        messages: this.buildMessages(messages, systemPrompt),
+        tools: TOOLS,
+        stream: true,
+      });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      const text = delta?.content ?? "";
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        const text = delta?.content ?? "";
 
-      if (text) {
-        fullContent += text;
-        onChunk(text);
-      }
+        if (text) {
+          fullContent += text;
+          onChunk(text);
+        }
 
-      const toolCall = delta?.tool_calls?.[0];
+        const toolCall = delta?.tool_calls?.[0];
 
-      if (toolCall) {
-        if (toolCall.id) toolCallId = toolCall.id;
-        if (toolCall.function?.name) toolCallName = toolCall.function.name;
-        if (toolCall.function?.arguments) {
-          toolCallArguments += toolCall.function.arguments;
+        if (toolCall) {
+          if (toolCall.id) toolCallId = toolCall.id;
+          if (toolCall.function?.name) toolCallName = toolCall.function.name;
+          if (toolCall.function?.arguments) {
+            toolCallArguments += toolCall.function.arguments;
+          }
         }
       }
-    }
 
-    if (toolCallName) {
-      let parsedInput: Record<string, string> = {};
+      if (toolCallName) {
+        let parsedInput: Record<string, string> = {};
 
-      try {
-        parsedInput = JSON.parse(toolCallArguments || "{}");
-      } catch {
-        parsedInput = {};
+        try {
+          parsedInput = JSON.parse(toolCallArguments || "{}");
+        } catch {
+          parsedInput = {};
+        }
+
+        const toolCall: ToolCall = {
+          id: toolCallId,
+          name: toolCallName,
+          input: parsedInput,
+        };
+
+        return { content: fullContent, toolCall };
       }
 
-      const toolCall: ToolCall = {
-        id: toolCallId,
-        name: toolCallName,
-        input: parsedInput,
-      };
-
-      return { content: fullContent, toolCall };
-    }
-
-    return { content: fullContent };
-  } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      if (error.status === 401) {
-        throw new Error("Invalid OpenAI API key.");
-      }
-
-      if (error.status === 429) {
-        throw new Error(
-          "OpenAI rate limit exceeded or insufficient credits.",
-        );
-      }
-
-      if (error.status === 400) {
-        throw new Error(`OpenAI request error: ${error.message}`);
-      }
-
-      throw new Error(
-        `OpenAI API error (${error.status}): ${error.message}`,
+      return { content: fullContent };
+    } catch (error) {
+  if (error instanceof OpenAI.APIError) {
+    if (error.status === 401) {
+      throw new ProviderError(
+        "Invalid OpenAI API key.",
+        401,
+        false,
       );
     }
 
-    throw new Error(
-      `Network or connection error: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+    if (error.status === 429) {
+      throw new ProviderError(
+        "OpenAI rate limit exceeded.",
+        429,
+        true,
+      );
+    }
+
+    if (error.status === 400) {
+      throw new ProviderError(
+        `OpenAI request error: ${error.message}`,
+        400,
+        false,
+      );
+    }
+
+    if (error.status === 500) {
+      throw new ProviderError(
+        `OpenAI API error (500): ${error.message}`,
+        500,
+        true,
+      );
+    }
+
+    throw new ProviderError(
+      `OpenAI API error (${error.status}): ${error.message}`,
+      error.status,
+      false,
     );
   }
+
+  throw new ProviderError(
+    `Network or connection error: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+    undefined,
+    true,
+  );
 }
+  }
 }
