@@ -1,5 +1,5 @@
 
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readFile } from "fs/promises";
 import { dirname } from "path";
 import {
   isProtectedPath,
@@ -21,7 +21,13 @@ export async function writeFileTool(
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, content, "utf-8");
 
-    return `File written successfully: ${path}`;
+    const verifiedContent = await readFile(path, "utf-8");
+
+    if (verifiedContent !== content) {
+      return `Error: File verification failed after writing ${path}`;
+    }
+
+    return `File written and verified successfully: ${path}`;
   } catch (error) {
     return `Error writing file: ${
       error instanceof Error ? error.message : error

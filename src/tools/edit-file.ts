@@ -27,7 +27,13 @@ export async function editFileTool(
     const updated = content.replace(oldStr, newStr);
     await writeFile(path, updated, "utf-8");
 
-    return `File edited successfully: ${path}`;
+    const verifiedContent = await readFile(path, "utf-8");
+
+    if (verifiedContent !== updated) {
+      return `Error: File verification failed after editing ${path}`;
+    }
+
+    return `File edited and verified successfully: ${path}`;
   } catch (error) {
     return `Error editing file: ${
       error instanceof Error ? error.message : error

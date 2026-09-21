@@ -126,7 +126,7 @@ export function allowsRestrictedFileChange(userPrompt: string): boolean {
   const prompt = userPrompt.toLowerCase();
 
   const intentPatterns = [
-    /\b(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)\b/,
+    // /\b(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)\b/,
     /\b(install|add|remove|uninstall|update|upgrade)\b.*\b(dependenc|package|npm|yarn|pnpm)\b/,
     /\b(npm|yarn|pnpm)\b.*\b(install|add|remove|uninstall|update|upgrade)\b/,
     /\b(change|modify|edit|update)\b.*\b(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)\b/,
@@ -137,9 +137,11 @@ export function allowsRestrictedFileChange(userPrompt: string): boolean {
 
 
 export function containsSecret(text: string): boolean {
-  return SECRET_PATTERNS.some((pattern) => pattern.test(text));
+  return SECRET_PATTERNS.some((pattern) => {
+    pattern.lastIndex = 0;
+    return pattern.test(text);
+  });
 }
-
  
 
 export function containsPromptInjection(text: string): boolean {

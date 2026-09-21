@@ -170,9 +170,10 @@ export class OpenAIProvider implements BaseProvider {
   }
 
   async sendMessage(
-    messages: Message[],
-    systemPrompt?: string,
-  ): Promise<ProviderResponse> {
+  messages: Message[],
+  systemPrompt?: string,
+): Promise<ProviderResponse> {
+  try {
     const response = await this.client.chat.completions.create({
       model: this.model,
       messages: this.buildMessages(messages, systemPrompt),
@@ -200,13 +201,41 @@ export class OpenAIProvider implements BaseProvider {
       inputTokens: response.usage?.prompt_tokens,
       outputTokens: response.usage?.completion_tokens,
     };
-  }
+  } catch (error) {
+    if (error instanceof OpenAI.APIError) {
+      if (error.status === 401) {
+        throw new Error("Invalid OpenAI API key.");
+      }
 
-  async streamMessage(
-    messages: Message[],
-    onChunk: (chunk: string) => void,
-    systemPrompt?: string,
-  ): Promise<ProviderResponse> {
+      if (error.status === 429) {
+        throw new Error(
+          "OpenAI rate limit exceeded or insufficient credits.",
+        );
+      }
+
+      if (error.status === 400) {
+        throw new Error(`OpenAI request error: ${error.message}`);
+      }
+
+      throw new Error(
+        `OpenAI API error (${error.status}): ${error.message}`,
+      );
+    }
+
+    throw new Error(
+      `Network or connection error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
+ async streamMessage(
+  messages: Message[],
+  onChunk: (chunk: string) => void,
+  systemPrompt?: string,
+): Promise<ProviderResponse> {
+  try {
     let fullContent = "";
     let toolCallId = "";
     let toolCallName = "";
@@ -233,12 +262,15 @@ export class OpenAIProvider implements BaseProvider {
       if (toolCall) {
         if (toolCall.id) toolCallId = toolCall.id;
         if (toolCall.function?.name) toolCallName = toolCall.function.name;
-        if (toolCall.function?.arguments) toolCallArguments += toolCall.function.arguments;
+        if (toolCall.function?.arguments) {
+          toolCallArguments += toolCall.function.arguments;
+        }
       }
     }
 
     if (toolCallName) {
       let parsedInput: Record<string, string> = {};
+
       try {
         parsedInput = JSON.parse(toolCallArguments || "{}");
       } catch {
@@ -255,5 +287,32 @@ export class OpenAIProvider implements BaseProvider {
     }
 
     return { content: fullContent };
+  } catch (error) {
+    if (error instanceof OpenAI.APIError) {
+      if (error.status === 401) {
+        throw new Error("Invalid OpenAI API key.");
+      }
+
+      if (error.status === 429) {
+        throw new Error(
+          "OpenAI rate limit exceeded or insufficient credits.",
+        );
+      }
+
+      if (error.status === 400) {
+        throw new Error(`OpenAI request error: ${error.message}`);
+      }
+
+      throw new Error(
+        `OpenAI API error (${error.status}): ${error.message}`,
+      );
+    }
+
+    throw new Error(
+      `Network or connection error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   }
+}
 }
