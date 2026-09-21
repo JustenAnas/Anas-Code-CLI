@@ -10,6 +10,13 @@ import { fmt } from "../ui/format.js";
 import { promptBeforeToolUse } from "./permission.js";
 import type { CliMode } from "./modes.js";
 import { gitTool } from "../tools/git.js";
+import {
+  inputGuardrail,
+  isProtectedPath,
+  allowsRestrictedFileChange,
+   isDestructiveCommand,
+} from "./guardrails.js";
+
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
@@ -152,10 +159,29 @@ function getAllowedTools(mode: CliMode): string[] {
   }
 }
 
+
 async function executeTool(
   name: string,
   input: Record<string, string>,
+  userPrompt: string,
 ): Promise<string> {
+  // Guard restricted file changes before asking for permission.
+  if (name === "write_file" || name === "edit_file") {
+    const guardrail = isProtectedPath(input.path);
+
+    if (!guardrail.allowed && !allowsRestrictedFileChange(userPrompt)) {
+      return `Blocked: ${guardrail.reason}`;
+    }
+  }
+
+  if (name === "bash") {
+  const guardrail = isDestructiveCommand(input.command);
+
+  if (!guardrail.allowed) {
+    return `Blocked: ${guardrail.reason}`;
+  }
+}
+
   const permission = await promptBeforeToolUse(name, input);
 
   if (permission.behavior === "deny") {
@@ -165,22 +191,40 @@ async function executeTool(
   switch (name) {
     case "read_file":
       return readFileTool(input.path);
+
     case "write_file":
-      return writeFileTool(input.path, input.content);
+      return writeFileTool(input.path, input.content, userPrompt);
+
     case "bash":
       return bashTool(input.command);
+
     case "glob":
       return globTool(input.pattern);
+
     case "list_dir":
       return listDirTool(input.path);
+
     case "edit_file":
-      return editFileTool(input.path, input.oldStr, input.newStr);
+      return editFileTool(
+        input.path,
+        input.oldStr,
+        input.newStr,
+        userPrompt,
+      );
+
     case "git":
-      return gitTool(input.action as "status" | "diff" | "log" | "branch");
+      return gitTool(
+        input.action as "status" | "diff" | "log" | "branch",
+      );
+
     default:
       return `Unknown tool: ${name}`;
   }
 }
+
+
+ 
+
 
 function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
   if (history.length <= maxMessages) return history;
@@ -215,6 +259,17 @@ export async function runAgentLoop(
   verbose: boolean = false,
   mode: CliMode = "agent",
 ): Promise<void> {
+    const guardrail = inputGuardrail(prompt);
+
+  if (!guardrail.allowed) {
+    onChunk(`\n[Guardrail Blocked] ${guardrail.reason}\n`);
+    return;
+  }
+
+  if (guardrail.warning) {
+    onChunk(`\n[Guardrail Warning] ${guardrail.warning}\n`);
+  }
+
   history.push({ role: "user", content: prompt });
 
   const MAX_ITERATIONS = 200;
@@ -278,7 +333,11 @@ export async function runAgentLoop(
       });
 
       try {
-        const toolResult = await executeTool(toolCall.name, toolCall.input);
+        const toolResult = await executeTool(
+  toolCall.name,
+  toolCall.input,
+  prompt,
+);
 
         onChunk(`\n[Tool: ${toolCall.name}] → ${toolResult}\n`);
 
@@ -333,7 +392,11 @@ export async function runAgentLoop(
     });
 
     try {
-      const toolResult = await executeTool(toolCall.name, toolCall.input);
+      const toolResult = await executeTool(
+  toolCall.name,
+  toolCall.input,
+  prompt,
+);
 
       if (toolResult.startsWith("Error ")) {
         history.push({
