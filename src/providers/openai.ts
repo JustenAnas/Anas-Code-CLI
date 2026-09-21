@@ -212,54 +212,46 @@ export class OpenAIProvider implements BaseProvider {
         outputTokens: response.usage?.completion_tokens,
       };
     } catch (error) {
-  if (error instanceof OpenAI.APIError) {
-    if (error.status === 401) {
-      throw new ProviderError(
-        "Invalid OpenAI API key.",
-        401,
-        false,
-      );
-    }
+      if (error instanceof OpenAI.APIError) {
+        if (error.status === 401) {
+          throw new ProviderError("Invalid OpenAI API key.", 401, false);
+        }
 
-    if (error.status === 429) {
+        if (error.status === 429) {
+          throw new ProviderError("OpenAI rate limit exceeded.", 429, true);
+        }
+
+        if (error.status === 400) {
+          throw new ProviderError(
+            `OpenAI request error: ${error.message}`,
+            400,
+            false,
+          );
+        }
+
+        if (error.status === 500) {
+          throw new ProviderError(
+            `OpenAI API error (500): ${error.message}`,
+            500,
+            true,
+          );
+        }
+
+        throw new ProviderError(
+          `OpenAI API error (${error.status}): ${error.message}`,
+          error.status,
+          false,
+        );
+      }
+
       throw new ProviderError(
-        "OpenAI rate limit exceeded.",
-        429,
+        `Network or connection error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        undefined,
         true,
       );
     }
-
-    if (error.status === 400) {
-      throw new ProviderError(
-        `OpenAI request error: ${error.message}`,
-        400,
-        false,
-      );
-    }
-
-    if (error.status === 500) {
-      throw new ProviderError(
-        `OpenAI API error (500): ${error.message}`,
-        500,
-        true,
-      );
-    }
-
-    throw new ProviderError(
-      `OpenAI API error (${error.status}): ${error.message}`,
-      error.status,
-      false,
-    );
-  }
-
-  throw new ProviderError(
-    `Network or connection error: ${
-      error instanceof Error ? error.message : String(error)
-    }`,
-    undefined,
-    true,
-  );
-}
   }
 
   async streamMessage(
@@ -278,10 +270,18 @@ export class OpenAIProvider implements BaseProvider {
         messages: this.buildMessages(messages, systemPrompt),
         tools: TOOLS,
         stream: true,
+        stream_options: { include_usage: true },
       });
+
+      let inputTokens = 0;
+      let outputTokens = 0;
 
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta;
+        if (chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens;
+          outputTokens = chunk.usage.completion_tokens;
+        }
         const text = delta?.content ?? "";
 
         if (text) {
@@ -315,58 +315,59 @@ export class OpenAIProvider implements BaseProvider {
           input: parsedInput,
         };
 
-        return { content: fullContent, toolCall };
+        return {
+          content: fullContent,
+          toolCall,
+          inputTokens,
+          outputTokens,
+        };
       }
 
-      return { content: fullContent };
+      return {
+        content: fullContent,
+        inputTokens,
+        outputTokens,
+      };
     } catch (error) {
-  if (error instanceof OpenAI.APIError) {
-    if (error.status === 401) {
-      throw new ProviderError(
-        "Invalid OpenAI API key.",
-        401,
-        false,
-      );
-    }
+      if (error instanceof OpenAI.APIError) {
+        if (error.status === 401) {
+          throw new ProviderError("Invalid OpenAI API key.", 401, false);
+        }
 
-    if (error.status === 429) {
+        if (error.status === 429) {
+          throw new ProviderError("OpenAI rate limit exceeded.", 429, true);
+        }
+
+        if (error.status === 400) {
+          throw new ProviderError(
+            `OpenAI request error: ${error.message}`,
+            400,
+            false,
+          );
+        }
+
+        if (error.status === 500) {
+          throw new ProviderError(
+            `OpenAI API error (500): ${error.message}`,
+            500,
+            true,
+          );
+        }
+
+        throw new ProviderError(
+          `OpenAI API error (${error.status}): ${error.message}`,
+          error.status,
+          false,
+        );
+      }
+
       throw new ProviderError(
-        "OpenAI rate limit exceeded.",
-        429,
+        `Network or connection error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        undefined,
         true,
       );
     }
-
-    if (error.status === 400) {
-      throw new ProviderError(
-        `OpenAI request error: ${error.message}`,
-        400,
-        false,
-      );
-    }
-
-    if (error.status === 500) {
-      throw new ProviderError(
-        `OpenAI API error (500): ${error.message}`,
-        500,
-        true,
-      );
-    }
-
-    throw new ProviderError(
-      `OpenAI API error (${error.status}): ${error.message}`,
-      error.status,
-      false,
-    );
-  }
-
-  throw new ProviderError(
-    `Network or connection error: ${
-      error instanceof Error ? error.message : String(error)
-    }`,
-    undefined,
-    true,
-  );
-}
   }
 }

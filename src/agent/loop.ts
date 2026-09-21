@@ -285,10 +285,7 @@ async function executeTool(
   return result;
 }
 
-function trimHistory(
-  history: Message[],
-  maxMessages: number = 20,
-): Message[] {
+function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
   if (history.length <= maxMessages) return history;
 
   // always keep first message (user's original task)
@@ -399,40 +396,16 @@ export async function runAgentLoop(
 
       const trimmedHistory = trimHistory(history);
       response = await withRetry(
-  () => provider.sendMessage(trimmedHistory, fullSystemPrompt),
-  3,
-  (attempt, error) => {
-    onChunk(
-      fmt.error(
-        `\n[Retry ${attempt}/3] ${error} — retrying...\n`,
-      ),
-    );
-  },
-);
-
-      if (response.content) {
-        const outputGuard = outputGuardrail(response.content);
-
-        if (!outputGuard.allowed) {
-          onChunk(
-            `\n[Output Guardrail Blocked] ${outputGuard.reason}\n`,
-          );
-
-          history.push({
-            role: "assistant",
-            content: response.content,
-          });
-
-          break;
-        }
-
-        onChunk(response.content);
-      }
+        () => provider.streamMessage(trimmedHistory, onChunk, fullSystemPrompt),
+        3,
+        (attempt, error) => {
+          onChunk(fmt.error(`\n[Retry ${attempt}/3] ${error} — retrying...\n`));
+        },
+      );
 
       if (response.inputTokens) {
-        const inputCost = (response.inputTokens * 2.50) / 1_000_000;
-        const outputCost =
-          ((response.outputTokens ?? 0) * 10.00) / 1_000_000;
+        const inputCost = (response.inputTokens * 2.5) / 1_000_000;
+        const outputCost = ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
         const totalCost = inputCost + outputCost;
 
         onChunk(
@@ -444,27 +417,27 @@ export async function runAgentLoop(
         );
       }
     } catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
-  // non-recoverable errors — stop the loop
-  if (
-    message.includes("Invalid OpenAI API key") ||
-    message.includes("insufficient credits") ||
-    message.includes("rate limit")
-  ) {
-    onChunk(fmt.error(`\n[API Error] ${message}\n`));
-    break;
-  }
+      // non-recoverable errors — stop the loop
+      if (
+        message.includes("Invalid OpenAI API key") ||
+        message.includes("insufficient credits") ||
+        message.includes("rate limit")
+      ) {
+        onChunk(fmt.error(`\n[API Error] ${message}\n`));
+        break;
+      }
 
-  // recoverable errors — tell the model and continue
-  onChunk(fmt.error(`\n[Error] ${message}\n`));
-  history.push({
-    role: "user",
-    content: `There was an error: ${message}. Please try again.`,
-  });
+      // recoverable errors — tell the model and continue
+      onChunk(fmt.error(`\n[Error] ${message}\n`));
+      history.push({
+        role: "user",
+        content: `There was an error: ${message}. Please try again.`,
+      });
 
-  break;
-}
+      break;
+    }
 
     // Native tool calling
     if (response.toolCall) {
@@ -472,9 +445,7 @@ export async function runAgentLoop(
       const allowedTools = getAllowedTools(mode);
 
       if (!allowedTools.includes(toolCall.name)) {
-        onChunk(
-          `\n[Blocked: ${toolCall.name} not allowed in ${mode} mode]\n`,
-        );
+        onChunk(`\n[Blocked: ${toolCall.name} not allowed in ${mode} mode]\n`);
 
         history.push({
           role: "assistant",
@@ -601,4 +572,4 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
       });
     }
   }
-} 
+}
