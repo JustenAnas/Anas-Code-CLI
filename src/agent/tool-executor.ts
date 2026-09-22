@@ -12,6 +12,7 @@ import {
   allowsRestrictedFileChange,
   isDestructiveCommand,
 } from "./guardrails.js";
+import { searchCodeTool } from "../tools/search-code.js";
 
 export async function executeTool(
   name: string,
@@ -93,6 +94,9 @@ export async function executeTool(
         input.action as "status" | "diff" | "log" | "branch",
       );
       break;
+      case "search_code":
+  result = await searchCodeTool(input.query);
+  break;
 
     default:
       return `Unknown tool: ${name}`;

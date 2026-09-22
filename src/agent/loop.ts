@@ -55,15 +55,17 @@ When working on a folder structure:
 
 When you are done with all tool calls, give your final response normally. Be concise and clear.
 
+IMPORTANT TOOL RULE:
+- Use search_code when you need to find text, symbols, functions, classes, variables, imports, or other content inside files.
+- Use glob only when you need to find files by filename or pattern.
+- Do not use bash/findstr/grep to search file contents when search_code can do it.
+
 If a tool returns an error, do not invent a result.
 Do not create, modify, or delete anything unless the user explicitly asked for it or it is necessary to complete the user's request.
 If read_file says a file does not exist and the user only asked to read it, report that the file does not exist. Do not create it.
 `;
 
-
-
-
-
+ 
 function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
   if (history.length <= maxMessages) return history;
 

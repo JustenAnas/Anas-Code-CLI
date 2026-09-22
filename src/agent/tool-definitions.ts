@@ -91,6 +91,20 @@ export const TOOLS = [
       required: ["action"],
     },
   },
+  {
+  name: "search_code",
+  description: "Search file contents for a text query",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "The text to search for inside project files",
+      },
+    },
+    required: ["query"],
+  },
+},
 ];
 
 const AGENT_TOOLS = [
@@ -101,6 +115,7 @@ const AGENT_TOOLS = [
   "glob",
   "list_dir",
   "git",
+  "search_code",
 ];
 
 const ASK_TOOLS = ["read_file", "glob", "list_dir"];
