@@ -123,22 +123,23 @@ const TOOLS = [
     },
   },
   {
-  type: "function" as const,
-  function: {
-    name: "search_code",
-    description:   "Search the CONTENTS of project files for text, symbols, functions, classes, variables, imports, or other code. Use this instead of bash, grep, findstr, or similar commands for content searches.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "The text to search for inside project files",
+    type: "function" as const,
+    function: {
+      name: "search_code",
+      description:
+        "Search the CONTENTS of project files for text, symbols, functions, classes, variables, imports, or other code. Use this instead of bash, grep, findstr, or similar commands for content searches.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The text to search for inside project files",
+          },
         },
+        required: ["query"],
       },
-      required: ["query"],
     },
   },
-},
 ];
 
 export class OpenAIProvider implements BaseProvider {

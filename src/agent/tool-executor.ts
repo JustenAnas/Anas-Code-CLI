@@ -1,4 +1,3 @@
-
 import { readFileTool } from "../tools/read-file.js";
 import { writeFileTool } from "../tools/write-file.js";
 import { bashTool } from "../tools/bash.js";
@@ -94,9 +93,9 @@ export async function executeTool(
         input.action as "status" | "diff" | "log" | "branch",
       );
       break;
-      case "search_code":
-  result = await searchCodeTool(input.query);
-  break;
+    case "search_code":
+      result = await searchCodeTool(input.query);
+      break;
 
     default:
       return `Unknown tool: ${name}`;
@@ -114,4 +113,3 @@ export async function executeTool(
 
   return result;
 }
-

@@ -67,4 +67,3 @@ export async function searchCodeTool(query: string): Promise<string> {
     }`;
   }
 }
-

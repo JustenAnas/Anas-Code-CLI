@@ -5,12 +5,12 @@ import {
 } from "../providers/base.js";
 import { fmt } from "../ui/format.js";
 import { executeTool } from "./tool-executor.js";
- import type { CliMode } from "./modes.js";
+import type { CliMode } from "./modes.js";
 import { getAllowedTools } from "./tool-definitions.js";
 import { parseToolCall } from "./tool-parser.js";
-import {
-  inputGuardrail,
-} from "./guardrails.js";
+import { inputGuardrail } from "./guardrails.js";
+
+import { parsePlan, type Plan } from "./plan.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
 
@@ -65,7 +65,6 @@ Do not create, modify, or delete anything unless the user explicitly asked for i
 If read_file says a file does not exist and the user only asked to read it, report that the file does not exist. Do not create it.
 `;
 
- 
 function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
   if (history.length <= maxMessages) return history;
 
@@ -142,12 +141,12 @@ export async function runAgentLoop(
   context: string = "",
   verbose: boolean = false,
   mode: CliMode = "agent",
-): Promise<void> {
+): Promise<Plan | null> {
   const guardrail = inputGuardrail(prompt);
 
   if (!guardrail.allowed) {
     onChunk(`\n[Guardrail Blocked] ${guardrail.reason}\n`);
-    return;
+    return null;
   }
 
   if (guardrail.warning) {
@@ -170,7 +169,7 @@ export async function runAgentLoop(
     try {
       const fullSystemPrompt =
         mode === "plan"
-          ? `${SYSTEM_PROMPT}\n\nYou are in PLAN mode. Do NOT use any tools. Do NOT write any code. Instead, provide a concise high-level plan — what folders to create, what files to make, what each file's purpose is, and what commands to run. Maximum 15 lines. No code blocks.`
+          ? `${SYSTEM_PROMPT}\n\nYou are in PLAN mode. Do NOT use any tools. Do NOT write or modify code.\n\nCreate a concise implementation plan for the user's task.\nReturn ONLY valid JSON in this exact format:\n{"steps":["step 1","step 2","step 3"]}\n\nRules:\n- Each step must be a clear action.\n- Keep the plan to 3-10 steps.\n- Do not include markdown or code fences.\n- Do not execute the plan.`
           : mode === "ask"
             ? `${SYSTEM_PROMPT}\n\nYou are in ASK mode. You can only read files, not create or modify them. Answer questions about the codebase using read_file, glob, and list_dir only.`
             : SYSTEM_PROMPT;
@@ -303,7 +302,9 @@ export async function runAgentLoop(
         role: "assistant",
         content: response.content,
       });
-
+      if (mode === "plan") {
+        return parsePlan(response.content);
+      }
       break;
     }
 
@@ -353,4 +354,5 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
       });
     }
   }
+  return null;
 }

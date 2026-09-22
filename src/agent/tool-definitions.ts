@@ -92,19 +92,19 @@ export const TOOLS = [
     },
   },
   {
-  name: "search_code",
-  description: "Search file contents for a text query",
-  input_schema: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description: "The text to search for inside project files",
+    name: "search_code",
+    description: "Search file contents for a text query",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "The text to search for inside project files",
+        },
       },
+      required: ["query"],
     },
-    required: ["query"],
   },
-},
 ];
 
 const AGENT_TOOLS = [
@@ -134,4 +134,3 @@ export function getAllowedTools(mode: CliMode): string[] {
       return PLAN_TOOLS;
   }
 }
-
