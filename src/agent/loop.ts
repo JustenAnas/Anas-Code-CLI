@@ -9,7 +9,7 @@ import type { CliMode } from "./modes.js";
 import { getAllowedTools } from "./tool-definitions.js";
 import { parseToolCall } from "./tool-parser.js";
 import { inputGuardrail } from "./guardrails.js";
-
+import type { PermissionResult } from "./permission.js";
 import { parsePlan, type Plan } from "./plan.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
@@ -75,18 +75,15 @@ If read_file says a file does not exist and the user only asked to read it, repo
 function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
   if (history.length <= maxMessages) return history;
 
-  // always keep first message (user's original task)
   const first = history[0];
   const rest = history.slice(1);
 
-  // trim from the front but never split tool call pairs
   let trimmed = rest;
 
   while (trimmed.length > maxMessages - 1) {
     const first = trimmed[0];
     const second = trimmed[1];
 
-    // if first is assistant with tool call, remove it AND its tool result together
     if (
       first?.role === "assistant" &&
       first?.toolCall &&
@@ -119,7 +116,6 @@ async function withRetry<T>(
           throw error;
         }
 
-        // 500: retry only once.
         if (error.status === 500 && attempt >= 2) {
           throw error;
         }
@@ -145,19 +141,24 @@ export async function runAgentLoop(
   provider: BaseProvider,
   history: Message[],
   onChunk: (chunk: string) => void,
+  onStatus?: (status: string) => void,
   context: string = "",
   verbose: boolean = false,
   mode: CliMode = "agent",
+permissionHandler?: (
+  toolName: string,
+  input: Record<string, string>,
+) => Promise<PermissionResult>,
 ): Promise<Plan | null> {
   const guardrail = inputGuardrail(prompt);
 
   if (!guardrail.allowed) {
-    onChunk(`\n[Guardrail Blocked] ${guardrail.reason}\n`);
+    onStatus?.(`[Guardrail Blocked] ${guardrail.reason}`);
     return null;
   }
 
   if (guardrail.warning) {
-    onChunk(`\n[Guardrail Warning] ${guardrail.warning}\n`);
+    onStatus?.(`[Guardrail Warning] ${guardrail.warning}`);
   }
 
   history.push({ role: "user", content: prompt });
@@ -182,11 +183,12 @@ export async function runAgentLoop(
             : SYSTEM_PROMPT;
 
       const trimmedHistory = trimHistory(history);
+
       response = await withRetry(
         () => provider.streamMessage(trimmedHistory, onChunk, fullSystemPrompt),
         3,
         (attempt, error) => {
-          onChunk(fmt.error(`\n[Retry ${attempt}/3] ${error} — retrying...\n`));
+          onStatus?.(`[Retry ${attempt}/3] ${error} — retrying...`);
         },
       );
 
@@ -195,29 +197,26 @@ export async function runAgentLoop(
         const outputCost = ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
         const totalCost = inputCost + outputCost;
 
-        onChunk(
-          fmt.dim(
-            `\n[Tokens: ${response.inputTokens} in · ${
-              response.outputTokens ?? 0
-            } out · $${totalCost.toFixed(6)}]\n`,
-          ),
+        onStatus?.(
+          `[Tokens: ${response.inputTokens} in · ${
+            response.outputTokens ?? 0
+          } out · $${totalCost.toFixed(6)}`,
         );
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      // non-recoverable errors — stop the loop
       if (
         message.includes("Invalid OpenAI API key") ||
         message.includes("insufficient credits") ||
         message.includes("rate limit")
       ) {
-        onChunk(fmt.error(`\n[API Error] ${message}\n`));
+        onStatus?.(`[API Error] ${message}`);
         break;
       }
 
-      // recoverable errors — tell the model and continue
-      onChunk(fmt.error(`\n[Error] ${message}\n`));
+      onStatus?.(`[Error] ${message}`);
+
       history.push({
         role: "user",
         content: `There was an error: ${message}. Please try again.`,
@@ -226,13 +225,12 @@ export async function runAgentLoop(
       break;
     }
 
-    // Native tool calling
     if (response.toolCall) {
       const toolCall = response.toolCall;
       const allowedTools = getAllowedTools(mode);
 
       if (!allowedTools.includes(toolCall.name)) {
-        onChunk(`\n[Blocked: ${toolCall.name} not allowed in ${mode} mode]\n`);
+        onStatus?.(`[Blocked: ${toolCall.name} not allowed in ${mode} mode]`);
 
         history.push({
           role: "assistant",
@@ -251,7 +249,7 @@ export async function runAgentLoop(
         continue;
       }
 
-      onChunk(`\n[Using tool: ${toolCall.name}]\n`);
+      onStatus?.(`[Using tool: ${toolCall.name}]`);
 
       history.push({
         role: "assistant",
@@ -266,9 +264,10 @@ export async function runAgentLoop(
           prompt,
           deniedToolCalls,
           failedToolCalls,
+          permissionHandler
         );
 
-        onChunk(`\n[Tool: ${toolCall.name}] → ${toolResult}\n`);
+        onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
 
         history.push({
           role: "tool",
@@ -279,7 +278,7 @@ export async function runAgentLoop(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
-        onChunk(`\n[Tool Error] → ${errorMessage}\n`);
+        onStatus?.(`[Tool Error] → ${errorMessage}`);
 
         history.push({
           role: "tool",
@@ -291,7 +290,6 @@ export async function runAgentLoop(
       continue;
     }
 
-    // Text-based fallback for providers without native tools
     const toolCall = parseToolCall(response.content);
 
     if (toolCall?.invalid) {
@@ -309,13 +307,15 @@ export async function runAgentLoop(
         role: "assistant",
         content: response.content,
       });
+
       if (mode === "plan") {
         return parsePlan(response.content);
       }
+
       break;
     }
 
-    onChunk(`\n[Using tool: ${toolCall.name}]\n`);
+    onStatus?.(`[Using tool: ${toolCall.name}]`);
 
     history.push({
       role: "assistant",
@@ -329,6 +329,7 @@ export async function runAgentLoop(
         prompt,
         deniedToolCalls,
         failedToolCalls,
+         permissionHandler,
       );
 
       if (toolResult.startsWith("Error ")) {
@@ -343,7 +344,7 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
         continue;
       }
 
-      onChunk(`\n[Tool: ${toolCall.name}] → ${toolResult}\n`);
+      onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
 
       history.push({
         role: "user",
@@ -353,7 +354,7 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      onChunk(`\n[Tool Error] → ${errorMessage}\n`);
+      onStatus?.(`[Tool Error] → ${errorMessage}`);
 
       history.push({
         role: "user",
@@ -361,5 +362,6 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
       });
     }
   }
+
   return null;
 }

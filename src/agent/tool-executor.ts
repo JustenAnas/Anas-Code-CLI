@@ -19,6 +19,7 @@ export async function executeTool(
   userPrompt: string,
   deniedToolCalls: Set<string>,
   failedToolCalls: Map<string, number>,
+  permissionHandler = promptBeforeToolUse,
 ): Promise<string> {
   const toolSignature = `${name}:${JSON.stringify(input)}`;
 
@@ -49,11 +50,11 @@ export async function executeTool(
     }
   }
 
-  const permission = await promptBeforeToolUse(name, input);
+  const permission = await permissionHandler(name, input);
 
   if (permission.behavior === "deny") {
     deniedToolCalls.add(toolSignature);
-    return permission.message;
+    return "User denied permission for this tool.";
   }
 
   let result: string;

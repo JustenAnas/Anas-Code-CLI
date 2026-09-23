@@ -2,14 +2,13 @@ import { confirm } from "@inquirer/prompts";
 
 type ToolInput = Record<string, string>;
 
-type PermissionResult =
+export type PermissionResult =
   | {
       behavior: "allow";
       updatedInput: ToolInput;
     }
   | {
       behavior: "deny";
-      message: string;
     };
 
 const dangerousTools = ["bash", "write_file", "edit_file"];
@@ -42,12 +41,11 @@ export const promptBeforeToolUse = async (
 
     return {
       behavior: "deny",
-      message: "User denied tool use",
     };
   } catch {
     return {
       behavior: "deny",
-      message: "User denied tool use",
     };
   }
 };
+

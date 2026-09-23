@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Box, Text } from "ink";
 
@@ -17,13 +16,13 @@ export function Chat({ messages }: ChatProps) {
       {messages.map((message, index) => (
         <Text key={index}>
           {message.role === "user"
-  ? "You"
-  : message.role === "assistant"
-    ? "Assistant"
-    : "Tool"}: {message.content}
+            ? "You"
+            : message.role === "assistant"
+              ? "Assistant"
+              : "Tool"}
+          : {message.content}
         </Text>
       ))}
     </Box>
   );
 }
-
