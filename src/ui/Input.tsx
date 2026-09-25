@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
 
 type InputProps = {
@@ -7,6 +8,15 @@ type InputProps = {
 
 export function Input({ onSubmit }: InputProps) {
   const [value, setValue] = useState("");
+  const [cursorVisible, setCursorVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCursorVisible((current) => !current);
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useInput((input, key) => {
     if (key.return) {
@@ -27,7 +37,11 @@ export function Input({ onSubmit }: InputProps) {
 
   return (
     <Box marginTop={1}>
-      <Text>You: &gt; {value}</Text>
+      <Text>
+        You: &gt; {value}
+        {cursorVisible ? "|" : " "}
+      </Text>
     </Box>
   );
 }
+

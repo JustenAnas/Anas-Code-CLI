@@ -1,3 +1,4 @@
+
 import {
   ProviderError,
   type BaseProvider,
@@ -145,10 +146,11 @@ export async function runAgentLoop(
   context: string = "",
   verbose: boolean = false,
   mode: CliMode = "agent",
-permissionHandler?: (
-  toolName: string,
-  input: Record<string, string>,
-) => Promise<PermissionResult>,
+  permissionHandler?: (
+    toolName: string,
+    input: Record<string, string>,
+  ) => Promise<PermissionResult>,
+  onUsage?: (inputTokens: number, outputTokens: number, cost: number) => void,
 ): Promise<Plan | null> {
   const guardrail = inputGuardrail(prompt);
 
@@ -185,7 +187,12 @@ permissionHandler?: (
       const trimmedHistory = trimHistory(history);
 
       response = await withRetry(
-        () => provider.streamMessage(trimmedHistory, onChunk, fullSystemPrompt),
+        () =>
+          provider.streamMessage(
+            trimmedHistory,
+            onChunk,
+            fullSystemPrompt,
+          ),
         3,
         (attempt, error) => {
           onStatus?.(`[Retry ${attempt}/3] ${error} — retrying...`);
@@ -194,13 +201,14 @@ permissionHandler?: (
 
       if (response.inputTokens) {
         const inputCost = (response.inputTokens * 2.5) / 1_000_000;
-        const outputCost = ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
+        const outputCost =
+          ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
         const totalCost = inputCost + outputCost;
 
-        onStatus?.(
-          `[Tokens: ${response.inputTokens} in · ${
-            response.outputTokens ?? 0
-          } out · $${totalCost.toFixed(6)}`,
+        onUsage?.(
+          response.inputTokens,
+          response.outputTokens ?? 0,
+          totalCost,
         );
       }
     } catch (error) {
@@ -264,7 +272,7 @@ permissionHandler?: (
           prompt,
           deniedToolCalls,
           failedToolCalls,
-          permissionHandler
+          permissionHandler,
         );
 
         onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
@@ -329,7 +337,7 @@ permissionHandler?: (
         prompt,
         deniedToolCalls,
         failedToolCalls,
-         permissionHandler,
+        permissionHandler,
       );
 
       if (toolResult.startsWith("Error ")) {
@@ -365,3 +373,4 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
 
   return null;
 }
+

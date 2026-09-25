@@ -2,12 +2,11 @@ import { input, confirm } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
 import { createProvider, type ProviderName } from "../providers/factory.js";
-import { startSpinner, stopSpinner } from "../ui/spinner.js";
-import { SLASH_COMMANDS } from "../config/constants.js";
 import type { Message } from "../providers/base.js";
 import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
+import { handleCommand } from "./handler.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -58,40 +57,25 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
     if (!trimmed) continue;
 
-    if (trimmed === "/exit") {
+    const command = handleCommand(trimmed, mode);
+
+    if (command.type === "exit") {
       running = false;
       break;
     }
 
-    if (trimmed === "/help") {
-      console.log(fmt.label("\nSlash commands:"));
-
-      for (const { command, description } of SLASH_COMMANDS) {
-        console.log(fmt.dim(`  ${command.padEnd(22)} ${description}`));
-      }
-
-      console.log();
+    if (command.type === "help") {
+      console.log(fmt.label(`\n${command.output}\n`));
       continue;
     }
 
-    if (trimmed.startsWith("/mode ")) {
-      const requestedMode = trimmed.slice(6).trim();
-
-      if (
-        requestedMode !== "agent" &&
-        requestedMode !== "ask" &&
-        requestedMode !== "plan"
-      ) {
-        console.log(fmt.error("Invalid mode. Use: agent, ask, or plan."));
-        continue;
-      }
-
-      mode = requestedMode;
+    if (command.type === "mode") {
+      mode = command.mode;
       console.log(fmt.mode(`Mode switched to: ${mode}`));
       continue;
     }
 
-    startSpinner("Thinking…");
+    // startSpinner("Thinking…");
 
     try {
       let firstChunk = true;
@@ -104,7 +88,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           if (mode === "plan") return;
 
           if (firstChunk) {
-            stopSpinner();
+            // stopSpinner();
             process.stdout.write(fmt.assistant("Assistant: "));
             firstChunk = false;
           }
@@ -117,7 +101,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
         mode,
       );
 
-      stopSpinner();
+      // stopSpinner();
 
       if (mode === "plan" && plan) {
         printPlan(plan);
@@ -135,7 +119,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
 ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
-          startSpinner("Executing…");
+          // startSpinner("Executing…");
 
           let executionFirstChunk = true;
 
@@ -145,7 +129,7 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
             history,
             (chunk) => {
               if (executionFirstChunk) {
-                stopSpinner();
+                // stopSpinner();
                 process.stdout.write(fmt.assistant("Assistant: "));
                 executionFirstChunk = false;
               }
@@ -158,14 +142,14 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
             mode,
           );
 
-          stopSpinner();
+          // stopSpinner();
           console.log();
         }
       }
 
       console.log();
     } catch (error) {
-      stopSpinner();
+      // stopSpinner();
 
       console.error(
         fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
