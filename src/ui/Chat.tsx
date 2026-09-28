@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 
@@ -78,4 +77,3 @@ export function Chat({ messages, status }: ChatProps) {
     </Box>
   );
 }
-

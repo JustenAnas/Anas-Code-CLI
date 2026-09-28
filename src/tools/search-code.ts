@@ -1,8 +1,9 @@
 import { readFile } from "fs/promises";
 import { glob } from "glob";
+import { getWorkspaceRoot } from "../utils/workspace-path.js";
 
 const IGNORE_PATTERNS = [
-  "node_modules/**",
+  "**/node_modules/**",
   ".git/**",
   ".next/**",
   "dist/**",
@@ -24,6 +25,7 @@ export async function searchCodeTool(query: string): Promise<string> {
 
   try {
     const files = await glob("**/*", {
+      cwd: getWorkspaceRoot(),
       ignore: IGNORE_PATTERNS,
       nodir: true,
       dot: false,

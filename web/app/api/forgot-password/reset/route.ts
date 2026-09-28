@@ -10,12 +10,32 @@ export async function POST(request: Request) {
   const raw = jar.get(RESET_COOKIE)?.value;
   if (!raw) return json({ error: "Reset verification expired" }, 401);
   const db = await getDb();
-  const record = await db.collection("passwordResetOtps").findOne({ purpose: "password_reset", verified: true, resetTokenHash: sha256(raw), expiresAt: { $gt: new Date() } });
+  const record = await db
+    .collection("passwordResetOtps")
+    .findOne({
+      purpose: "password_reset",
+      verified: true,
+      resetTokenHash: sha256(raw),
+      expiresAt: { $gt: new Date() },
+    });
   if (!record) return json({ error: "Reset verification expired" }, 401);
   const user = await db.collection("users").findOne({ email: record.email });
   if (!user) return json({ error: "Reset verification expired" }, 401);
-  await db.collection("users").updateOne({ _id: user._id }, { $set: { passwordHash: await hashPassword(parsed.data.password), updatedAt: new Date() } });
-  await Promise.all([db.collection("sessions").deleteMany({ userId: user._id.toString() }), db.collection("passwordResetOtps").deleteOne({ _id: record._id })]);
+  await db
+    .collection("users")
+    .updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          passwordHash: await hashPassword(parsed.data.password),
+          updatedAt: new Date(),
+        },
+      },
+    );
+  await Promise.all([
+    db.collection("sessions").deleteMany({ userId: user._id.toString() }),
+    db.collection("passwordResetOtps").deleteOne({ _id: record._id }),
+  ]);
   jar.delete(RESET_COOKIE);
   return json({ message: "Password reset successfully" });
 }

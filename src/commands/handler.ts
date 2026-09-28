@@ -25,8 +25,7 @@ export function handleCommand(
     const output = [
       "Slash commands:",
       ...SLASH_COMMANDS.map(
-        ({ command, description }) =>
-          `  ${command.padEnd(22)} ${description}`,
+        ({ command, description }) => `  ${command.padEnd(22)} ${description}`,
       ),
     ].join("\n");
 

@@ -1,4 +1,5 @@
 import { execa } from "execa";
+import { getWorkspaceRoot } from "../utils/workspace-path.js";
 
 type GitAction = "status" | "diff" | "log" | "branch";
 
@@ -12,7 +13,7 @@ export async function gitTool(action: GitAction): Promise<string> {
 
   try {
     const { stdout, stderr } = await execa("git", commands[action], {
-      cwd: process.cwd(),
+      cwd: getWorkspaceRoot(),
     });
 
     return stdout || stderr || "No output.";

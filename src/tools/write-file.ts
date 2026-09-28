@@ -4,29 +4,39 @@ import {
   isProtectedPath,
   allowsRestrictedFileChange,
 } from "../agent/guardrails.js";
+import {
+  resolveWorkspacePath,
+  isInsideWorkspace,
+} from "../utils/workspace-path.js";
 
 export async function writeFileTool(
-  path: string,
+  inputPath: string,
   content: string,
   userPrompt: string,
 ): Promise<string> {
-  const guardrail = isProtectedPath(path);
+  const filePath = resolveWorkspacePath(inputPath);
+
+  if (!isInsideWorkspace(filePath)) {
+    return `Error: Path is outside the ANAS workspace and is not allowed: ${inputPath}`;
+  }
+
+  const guardrail = isProtectedPath(filePath);
 
   if (!guardrail.allowed && !allowsRestrictedFileChange(userPrompt)) {
     return `Blocked: ${guardrail.reason}`;
   }
 
   try {
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, content, "utf-8");
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, content, "utf-8");
 
-    const verifiedContent = await readFile(path, "utf-8");
+    const verifiedContent = await readFile(filePath, "utf-8");
 
     if (verifiedContent !== content) {
-      return `Error: File verification failed after writing ${path}`;
+      return `Error: File verification failed after writing ${filePath}`;
     }
 
-    return `File written and verified successfully: ${path}`;
+    return `File written and verified successfully: ${filePath}`;
   } catch (error) {
     return `Error writing file: ${
       error instanceof Error ? error.message : error

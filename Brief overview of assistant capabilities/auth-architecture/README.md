@@ -30,15 +30,15 @@ Copy `.env.example` to `.env.local`, fill in MongoDB and SMTP values, then copy 
 
 ## Endpoints
 
-| Method | Endpoint | Body |
-|---|---|---|
-| POST | `/api/auth/signup` | `{ name, email, password }` |
-| POST | `/api/auth/login` | `{ email, password }` |
-| POST | `/api/auth/logout` | none |
-| GET | `/api/auth/me` | none |
-| POST | `/api/auth/forgot-password/request` | `{ email }` |
-| POST | `/api/auth/forgot-password/verify` | `{ email, otp }` |
-| POST | `/api/auth/forgot-password/reset` | `{ password }` |
+| Method | Endpoint                            | Body                        |
+| ------ | ----------------------------------- | --------------------------- |
+| POST   | `/api/auth/signup`                  | `{ name, email, password }` |
+| POST   | `/api/auth/login`                   | `{ email, password }`       |
+| POST   | `/api/auth/logout`                  | none                        |
+| GET    | `/api/auth/me`                      | none                        |
+| POST   | `/api/auth/forgot-password/request` | `{ email }`                 |
+| POST   | `/api/auth/forgot-password/verify`  | `{ email, otp }`            |
+| POST   | `/api/auth/forgot-password/reset`   | `{ password }`              |
 
 ## Production checklist
 

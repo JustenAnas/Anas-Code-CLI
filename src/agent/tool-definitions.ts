@@ -118,7 +118,7 @@ const AGENT_TOOLS = [
   "search_code",
 ];
 
-const ASK_TOOLS = ["read_file", "glob", "list_dir"];
+const ASK_TOOLS = ["read_file", "search_code", "glob", "list_dir"];
 
 const PLAN_TOOLS: string[] = [];
 

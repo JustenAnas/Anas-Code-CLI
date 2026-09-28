@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
 
@@ -44,4 +43,3 @@ export function Input({ onSubmit }: InputProps) {
     </Box>
   );
 }
-

@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import React, { useRef, useState } from "react";
 import { render, Box, Text, useInput } from "ink";
@@ -18,23 +17,16 @@ type PermissionRequest = {
   resolve: (result: PermissionResult) => void;
 };
 
-const PROVIDERS: ProviderName[] = [
-  "openrouter",
-  "openai",
-  "gemini",
-  "claude",
-];
+const PROVIDERS: ProviderName[] = ["openrouter", "openai", "gemini", "claude"];
 
 const MODES: CliMode[] = ["agent", "ask", "plan"];
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState("");
-  const [permission, setPermission] =
-    useState<PermissionRequest | null>(null);
+  const [permission, setPermission] = useState<PermissionRequest | null>(null);
 
-  const [providerName, setProviderName] =
-    useState<ProviderName | null>(null);
+  const [providerName, setProviderName] = useState<ProviderName | null>(null);
 
   const [mode, setMode] = useState<CliMode | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,7 +42,8 @@ function App() {
 
   const [selectionIndex, setSelectionIndex] = useState(0);
 
-  const setupStep = providerName === null ? "provider" : mode === null ? "mode" : "chat";
+  const setupStep =
+    providerName === null ? "provider" : mode === null ? "mode" : "chat";
 
   const provider = providerName ? createProvider(providerName) : null;
 
@@ -243,9 +236,7 @@ function App() {
 
         <Box marginTop={1} flexDirection="column">
           <Text bold>
-            {setupStep === "provider"
-              ? "Choose a provider:"
-              : "Choose a mode:"}
+            {setupStep === "provider" ? "Choose a provider:" : "Choose a mode:"}
           </Text>
 
           <Box marginTop={1} flexDirection="column">
@@ -295,4 +286,3 @@ function App() {
 }
 
 render(<App />);
-
