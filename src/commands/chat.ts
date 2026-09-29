@@ -8,6 +8,7 @@ import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
 import { handleCommand } from "./handler.js";
 import { createSession, addMessage } from "../agent/session.js";
+import { SessionStore } from "../agent/session-store.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -36,7 +37,9 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const provider = createProvider(providerName);
   const context = await buildProjectContext();
 
+  const sessionStore = new SessionStore();
   let session = createSession();
+  sessionStore.save(session);
   // const history = session.messages;
 
   if (context) {
@@ -68,7 +71,28 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
     if (command.type === "new") {
       session = createSession();
+      sessionStore.save(session);
       console.log(fmt.mode("New session started.\n"));
+      continue;
+    }
+
+    if (command.type === "history") {
+      const sessions = sessionStore.getAll();
+
+      if (sessions.length === 0) {
+        console.log(fmt.dim("\nNo sessions found.\n"));
+        continue;
+      }
+
+      console.log(fmt.mode("\nSession History"));
+
+      sessions.forEach((storedSession, index) => {
+        console.log(
+          `${index + 1}. ${storedSession.id} · ${storedSession.updatedAt.toLocaleString()} · ${storedSession.messages.length} messages`,
+        );
+      });
+
+      console.log();
       continue;
     }
 
