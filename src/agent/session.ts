@@ -1,10 +1,13 @@
 import type { Message } from "../providers/base.js";
+import type { Memory } from "./memory.js";
+import { createMemory } from "./memory.js";
 
 export type Session = {
   id: string;
   createdAt: Date;
   updatedAt: Date;
   messages: Message[];
+  memory: Memory;
 };
 
 export function createSession(): Session {
@@ -15,6 +18,7 @@ export function createSession(): Session {
     createdAt: now,
     updatedAt: now,
     messages: [],
+    memory: createMemory(),
   };
 }
 

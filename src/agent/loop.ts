@@ -185,6 +185,7 @@ export async function runAgentLoop(
   onUsage?: (inputTokens: number, outputTokens: number, cost: number) => void,
 ): Promise<Plan | null> {
   const history = session.messages;
+
   const guardrail = inputGuardrail(prompt);
 
   if (!guardrail.allowed) {
@@ -209,6 +210,11 @@ export async function runAgentLoop(
 
     let response;
 
+    const memory =
+      session.memory.items.length > 0
+        ? `\n\nMemory:\n${session.memory.items.join("\n")}`
+        : "";
+
     try {
       const fullSystemPrompt =
         mode === "plan"
@@ -217,10 +223,13 @@ export async function runAgentLoop(
             ? `${SYSTEM_PROMPT}\n\nYou are in ASK mode. You can only read and inspect files, not create or modify them. Use only read_file, search_code, glob, and list_dir.`
             : SYSTEM_PROMPT;
 
+      const finalSystemPrompt = `${fullSystemPrompt}${memory}`;
+
       const trimmedHistory = trimHistory(history);
 
       response = await withRetry(
-        () => provider.streamMessage(trimmedHistory, onChunk, fullSystemPrompt),
+        () =>
+          provider.streamMessage(trimmedHistory, onChunk, finalSystemPrompt),
         3,
         (attempt, error) => {
           onStatus?.(`[Retry ${attempt}/3] ${error} — retrying...`);
