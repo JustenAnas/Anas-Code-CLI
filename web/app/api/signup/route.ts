@@ -12,15 +12,13 @@ export async function POST(request: Request) {
   const db = await getDb();
   if (await db.collection("users").findOne({ email }))
     return json({ error: "Email or password is invalid" }, 409);
-  const result = await db
-    .collection("users")
-    .insertOne({
-      name: parsed.data.name,
-      email,
-      passwordHash: await hashPassword(parsed.data.password),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  const result = await db.collection("users").insertOne({
+    name: parsed.data.name,
+    email,
+    passwordHash: await hashPassword(parsed.data.password),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
   await createSession(result.insertedId.toString());
   return json(
     {

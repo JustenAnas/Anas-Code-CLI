@@ -7,6 +7,7 @@ import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
 import { handleCommand } from "./handler.js";
+import { createSession, addMessage } from "../agent/session.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -35,7 +36,8 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const provider = createProvider(providerName);
   const context = await buildProjectContext();
 
-  const history: Message[] = [];
+  const session = createSession();
+  const history = session.messages;
 
   if (context) {
     history.push({
