@@ -1,4 +1,4 @@
-import { input, confirm } from "@inquirer/prompts";
+import { input, confirm, select } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
 import { createProvider, type ProviderName } from "../providers/factory.js";
@@ -93,6 +93,36 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       });
 
       console.log();
+      continue;
+    }
+
+    if (command.type === "resume") {
+      const sessions = sessionStore
+        .getAll()
+        .filter((storedSession) => storedSession.id !== session.id);
+
+      if (sessions.length === 0) {
+        console.log(fmt.dim("\nNo previous sessions found.\n"));
+        continue;
+      }
+
+      const selectedId = await select({
+        message: "Resume session:",
+        choices: sessions.map((storedSession) => ({
+          name: `${storedSession.id} · ${storedSession.updatedAt.toLocaleString()} · ${storedSession.messages.length} messages`,
+          value: storedSession.id,
+        })),
+      });
+
+      const selectedSession = sessionStore.get(selectedId);
+
+      if (!selectedSession) {
+        console.log(fmt.error("Session not found."));
+        continue;
+      }
+
+      session = selectedSession;
+      console.log(fmt.mode("\nSession resumed.\n"));
       continue;
     }
 

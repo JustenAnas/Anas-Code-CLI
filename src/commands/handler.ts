@@ -6,6 +6,7 @@ export type CommandResult =
   | { type: "new" }
   | { type: "history" }
   | { type: "help"; output: string }
+  | { type: "resume"; sessionId?: string }
   | { type: "mode"; mode: CliMode }
   | { type: "not-command" };
 
@@ -29,6 +30,10 @@ export function handleCommand(
 
   if (trimmed === "/history") {
     return { type: "history" };
+  }
+
+  if (trimmed === "/resume") {
+    return { type: "resume" };
   }
 
   if (trimmed === "/help") {
