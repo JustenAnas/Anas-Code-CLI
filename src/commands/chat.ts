@@ -2,7 +2,7 @@ import { input, confirm } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
 import { createProvider, type ProviderName } from "../providers/factory.js";
-import type { Message } from "../providers/base.js";
+// import type { Message } from "../providers/base.js";
 import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
@@ -36,11 +36,11 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const provider = createProvider(providerName);
   const context = await buildProjectContext();
 
-  const session = createSession();
-  const history = session.messages;
+  let session = createSession();
+  // const history = session.messages;
 
   if (context) {
-    history.push({
+    addMessage(session, {
       role: "assistant",
       content: `I have scanned your project structure:${context}`,
     });
@@ -66,6 +66,12 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       break;
     }
 
+    if (command.type === "new") {
+      session = createSession();
+      console.log(fmt.mode("New session started.\n"));
+      continue;
+    }
+
     if (command.type === "help") {
       console.log(fmt.label(`\n${command.output}\n`));
       continue;
@@ -85,7 +91,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       const plan = await runAgentLoop(
         trimmed,
         provider,
-        history,
+        session,
         (chunk) => {
           if (mode === "plan") return;
 
@@ -128,7 +134,7 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
           await runAgentLoop(
             executionPrompt,
             provider,
-            history,
+            session,
             (chunk) => {
               if (executionFirstChunk) {
                 // stopSpinner();

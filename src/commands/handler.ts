@@ -3,6 +3,7 @@ import type { CliMode } from "../agent/modes.js";
 
 export type CommandResult =
   | { type: "exit" }
+  | { type: "new" }
   | { type: "help"; output: string }
   | { type: "mode"; mode: CliMode }
   | { type: "not-command" };
@@ -19,6 +20,10 @@ export function handleCommand(
 
   if (trimmed === "/exit") {
     return { type: "exit" };
+  }
+
+  if (trimmed === "/new") {
+    return { type: "new" };
   }
 
   if (trimmed === "/help") {

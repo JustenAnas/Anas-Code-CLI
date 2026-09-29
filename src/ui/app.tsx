@@ -10,6 +10,7 @@ import type { Message } from "../providers/base.js";
 import type { PermissionResult } from "../agent/permission.js";
 import { handleCommand } from "../commands/handler.js";
 import type { CliMode } from "../agent/modes.js";
+import { createSession, addMessage } from "../agent/session.js";
 
 type PermissionRequest = {
   toolName: string;
@@ -37,7 +38,8 @@ function App() {
     cost: number;
   } | null>(null);
 
-  const historyRef = useRef<Message[]>([]);
+  // const historyRef = useRef<Message[]>([]);
+  const session = createSession();
   const permissionRef = useRef<PermissionRequest | null>(null);
 
   const [selectionIndex, setSelectionIndex] = useState(0);
@@ -161,7 +163,7 @@ function App() {
     };
 
     setMessages((current) => [...current, userMessage]);
-    historyRef.current.push(userMessage);
+    addMessage(session, userMessage);
 
     let assistantContent = "";
 
@@ -169,7 +171,7 @@ function App() {
       await runAgentLoop(
         value,
         provider,
-        historyRef.current,
+        session,
         (chunk) => {
           assistantContent += chunk;
 
@@ -214,7 +216,7 @@ function App() {
       );
 
       if (assistantContent) {
-        historyRef.current.push({
+        addMessage(session, {
           role: "assistant",
           content: assistantContent,
         });

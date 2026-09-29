@@ -10,6 +10,7 @@ import { getAllowedTools } from "./tool-definitions.js";
 import { parseToolCall } from "./tool-parser.js";
 import { inputGuardrail } from "./guardrails.js";
 import type { PermissionResult } from "./permission.js";
+import { addMessage, type Session } from "./session.js";
 import { parsePlan, type Plan } from "./plan.js";
 
 export const SYSTEM_PROMPT = `You are an AI coding assistant with access to the following tools:
@@ -171,7 +172,7 @@ async function withRetry<T>(
 export async function runAgentLoop(
   prompt: string,
   provider: BaseProvider,
-  history: Message[],
+  session: Session,
   onChunk: (chunk: string) => void,
   onStatus?: (status: string) => void,
   context: string = "",
@@ -183,6 +184,7 @@ export async function runAgentLoop(
   ) => Promise<PermissionResult>,
   onUsage?: (inputTokens: number, outputTokens: number, cost: number) => void,
 ): Promise<Plan | null> {
+  const history = session.messages;
   const guardrail = inputGuardrail(prompt);
 
   if (!guardrail.allowed) {
