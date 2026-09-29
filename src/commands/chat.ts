@@ -7,7 +7,7 @@ import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
 import { handleCommand } from "./handler.js";
-import { createSession, addMessage } from "../agent/session.js";
+import { addMessage } from "../agent/session.js";
 import { SessionStore } from "../agent/session-store.js";
 
 export type ChatOptions = {
@@ -38,9 +38,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const context = await buildProjectContext();
 
   const sessionStore = new SessionStore();
-  let session = createSession();
-  sessionStore.save(session);
-  // const history = session.messages;
+  let session = sessionStore.create();
 
   if (context) {
     addMessage(session, {
@@ -70,8 +68,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
     }
 
     if (command.type === "new") {
-      session = createSession();
-      sessionStore.save(session);
+      session = sessionStore.create();
       console.log(fmt.mode("New session started.\n"));
       continue;
     }
@@ -121,7 +118,9 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
         continue;
       }
 
+      sessionStore.setActive(selectedSession.id);
       session = selectedSession;
+
       console.log(fmt.mode("\nSession resumed.\n"));
       continue;
     }
