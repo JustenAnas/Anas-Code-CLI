@@ -1,12 +1,17 @@
 import type { Session } from "./session.js";
 import { createSession } from "./session.js";
+import type { Memory } from "./memory.js";
+import { createMemory } from "./memory.js";
 
 export class SessionStore {
   private sessions = new Map<string, Session>();
   private activeSessionId: string | null = null;
+  private memory: Memory = createMemory();
 
   create(): Session {
     const session = createSession();
+
+    session.memory = this.memory;
 
     this.sessions.set(session.id, session);
     this.activeSessionId = session.id;

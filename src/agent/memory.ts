@@ -28,22 +28,26 @@ export async function updateMemory(
   const memoryPrompt = `
 You manage the long-term memory for an AI coding agent.
 
+Your job is to maintain the existing memory, not replace it unnecessarily.
+
 Current memory:
 ${memory.items.length > 0 ? memory.items.join("\n") : "(empty)"}
 
 Conversation:
 ${messages.map((message) => `${message.role}: ${message.content}`).join("\n")}
 
-Decide what information is important enough to remember.
-
 Rules:
-- Keep only useful, durable information.
-- Remember user preferences, project decisions, important constraints, and recurring facts.
-- Do not remember temporary conversation details.
-- Update existing memories when they change.
-- Remove memories that are no longer true.
-- Keep the memory concise.
+- Preserve existing memories unless the conversation clearly shows they are no longer true.
+- Add new information only if it is useful and durable.
+- Update an existing memory when the user explicitly changes that preference, decision, or constraint.
+- Remove an existing memory only when it is clearly outdated or contradicted.
+- Do not turn temporary questions, explanations, or general advice into memories.
+- Do not store information about programming languages unless it represents the user's actual preference or decision.
+- Do not replace specific user preferences with generic advice.
+- Keep memory concise.
+- Return the COMPLETE updated memory, including existing memories that should remain.
 - Return ONLY valid JSON in this exact format:
+
 {"items":["memory 1","memory 2"]}
 `;
 
@@ -59,11 +63,11 @@ Rules:
       return memory;
     }
 
-    return {
-      items: parsed.items.filter(
-        (item): item is string => typeof item === "string",
-      ),
-    };
+    memory.items = parsed.items.filter(
+      (item): item is string => typeof item === "string",
+    );
+
+    return memory;
   } catch {
     return memory;
   }

@@ -9,6 +9,7 @@ import type { CliMode } from "./modes.js";
 import { getAllowedTools } from "./tool-definitions.js";
 import { parseToolCall } from "./tool-parser.js";
 import { inputGuardrail } from "./guardrails.js";
+import { updateMemory } from "./memory.js";
 import type { PermissionResult } from "./permission.js";
 import { addMessage, type Session } from "./session.js";
 import { parsePlan, type Plan } from "./plan.js";
@@ -351,6 +352,8 @@ export async function runAgentLoop(
       if (mode === "plan") {
         return parsePlan(response.content);
       }
+
+      session.memory = await updateMemory(session.memory, history, provider);
 
       break;
     }
