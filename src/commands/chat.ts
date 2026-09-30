@@ -9,6 +9,7 @@ import type { Plan } from "../agent/plan.js";
 import { handleCommand } from "./handler.js";
 import { addMessage } from "../agent/session.js";
 import { SessionStore } from "../agent/session-store.js";
+import { resolveFileReferences } from "../agent/file-references.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -57,6 +58,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   while (running) {
     const line = await input({ message: fmt.label("You:") });
     const trimmed = line.trim();
+    const enrichedPrompt = await resolveFileReferences(trimmed);
 
     if (!trimmed) continue;
 
@@ -142,7 +144,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       let firstChunk = true;
 
       const plan = await runAgentLoop(
-        trimmed,
+        enrichedPrompt,
         provider,
         session,
         (chunk) => {
