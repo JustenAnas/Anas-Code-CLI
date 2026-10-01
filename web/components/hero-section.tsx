@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Lanyard from "@/components/ui/lanyard";
 import DecryptedText from "@/components/DecryptedText";
@@ -20,14 +22,15 @@ export default function HeroSection() {
                   revealDirection="start"
                   sequential
                   useOriginalCharsOnly={false}
-                  speed={70}
+                  speed={55}
                   className="rounded-md bg-black font-mono uppercase text-white/60"
                 />
               </div>
 
               <TextEffect
                 preset="fade-in-blur"
-                speedSegment={0.3}
+                speedSegment={0.4}
+                delay={0.25}
                 as="h1"
                 className="max-w-2xl text-balance text-6xl font-semibold md:text-7xl xl:text-8xl"
               >
@@ -36,7 +39,8 @@ export default function HeroSection() {
 
               <TextEffect
                 preset="fade-in-blur"
-                speedSegment={0.3}
+                speedSegment={0.4}
+                delay={0.45}
                 as="h1"
                 className="max-w-2xl text-balance text-6xl font-semibold md:text-7xl xl:text-8xl"
               >
@@ -46,8 +50,8 @@ export default function HeroSection() {
               <TextEffect
                 per="line"
                 preset="fade-in-blur"
-                speedSegment={0.3}
-                delay={0.5}
+                speedSegment={0.35}
+                delay={0.7}
                 as="p"
                 className="mt-8 max-w-2xl text-pretty text-lg text-white/60"
               >
@@ -61,8 +65,8 @@ export default function HeroSection() {
                   container: {
                     visible: {
                       transition: {
-                        staggerChildren: 0.05,
-                        delayChildren: 0.75,
+                        staggerChildren: 0.12,
+                        delayChildren: 1.05,
                       },
                     },
                   },
@@ -74,21 +78,21 @@ export default function HeroSection() {
                   href="/signup"
                   className="rounded-full bg-white px-6 py-3 text-base font-medium text-black transition hover:bg-white/90"
                 >
-                  Get Started
+                  Sign Up
                 </Link>
 
                 <Link
-                  href="#features"
+                  href="/docs"
                   className="rounded-full bg-black/30 px-6 py-3 text-base text-white backdrop-blur-sm transition hover:bg-white/10"
                 >
-                  Explore ANAS
+                  Documents
                 </Link>
               </AnimatedGroup>
             </div>
           </div>
 
           {/* Right side */}
-          <div className="relative h-[700px] w-full lg:h-screen">
+          <div className="relative h-175 w-full lg:h-screen">
             <Lanyard />
           </div>
         </div>

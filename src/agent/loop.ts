@@ -11,6 +11,7 @@ import { parseToolCall } from "./tool-parser.js";
 import { inputGuardrail } from "./guardrails.js";
 import { updateMemory } from "./memory.js";
 import type { PermissionResult } from "./permission.js";
+import { shouldCompact, compactHistory } from "./compaction.js";
 import { addMessage, type Session } from "./session.js";
 import { parsePlan, type Plan } from "./plan.js";
 
@@ -225,6 +226,11 @@ export async function runAgentLoop(
             : SYSTEM_PROMPT;
 
       const finalSystemPrompt = `${fullSystemPrompt}${memory}`;
+
+      if (shouldCompact(history)) {
+        const compactedHistory = await compactHistory(history, provider);
+        history.splice(0, history.length, ...compactedHistory);
+      }
 
       const trimmedHistory = trimHistory(history);
 
