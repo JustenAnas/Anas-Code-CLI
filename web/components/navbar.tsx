@@ -9,7 +9,7 @@ export default function Navbar() {
     <nav
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`relative z-50 flex items-center justify-between px-8 py-6 transition-colors duration-300 ${
+      className={`sticky top-0 z-50 flex items-center justify-between px-8 py-6 transition-colors duration-300 ${
         hovered ? "bg-white text-black" : "bg-black text-white"
       }`}
     >
