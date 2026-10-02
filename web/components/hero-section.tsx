@@ -13,7 +13,7 @@ export default function HeroSection() {
       <section className="lg:h-screen">
         <div className="grid grid-cols-1 grid-rows-2 pb-24 pt-12 md:pb-32 lg:grid-cols-2 lg:grid-rows-1 lg:pb-56 lg:pt-24">
           {/* Left side */}
-          <div className="relative mx-auto flex max-w-xl flex-col px-6 lg:block">
+          <div className="relative mx-auto flex max-w-xl flex-col px-6 lg:-mt-12 lg:block">
             <div className="mx-auto max-w-2xl text-center lg:ml-0 lg:text-left">
               <div className="mt-8 lg:mt-16">
                 <DecryptedText
@@ -92,8 +92,42 @@ export default function HeroSection() {
           </div>
 
           {/* Right side */}
-          <div className="relative h-175 w-full lg:h-screen">
-            <Lanyard />
+          <div className="relative flex w-full flex-col items-center lg:-mt-12">
+            <div className="relative w-[96%] max-w-4xl">
+              <img
+                src="/hero-preview.png"
+                alt="ANAS CLI preview"
+                className="h-110 w-full rounded-2xl border border-white/10 object-cover"
+              />
+              {/* card */}
+              <div className="pointer-events-auto absolute inset-0 z-10">
+                <Lanyard
+                  position={[0, 0, 20]}
+                  containerClassName="relative h-screen w-full select-none"
+                />
+              </div>
+            </div>
+
+            <div className="relative z-20 mt-16 w-[96%] max-w-4xl">
+              <p className="mb-4 text-2xl font-medium text-white">
+                Be the first to know when we launch or update our product.
+              </p>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="email"
+                  placeholder="Mail"
+                  className="h-12 flex-1 rounded-full border border-white/10 bg-black/40 px-5 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/30"
+                />
+
+                <button
+                  type="button"
+                  className="h-12 rounded-full bg-white px-6 text-sm font-medium text-black transition-all duration-300 hover:scale-105 hover:bg-white/80"
+                >
+                  Subscribe
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

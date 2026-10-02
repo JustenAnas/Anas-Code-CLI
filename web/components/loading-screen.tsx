@@ -30,7 +30,7 @@ export default function LoadingScreen({
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col justify-between bg-black p-8 text-white">
+    <div className="fixed inset-0 z-9999 flex flex-col justify-between bg-black p-8 text-white">
       <div className="flex items-center justify-between">
         <span className="font-mono text-sm tracking-[0.2em] text-white/50">
           ANAS CLI
