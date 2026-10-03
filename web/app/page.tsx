@@ -1,8 +1,8 @@
 import Navbar from "@/components/navbar";
 import HeroSection from "@/components/hero-section";
 import StatsSection from "@/components/stats-section";
-import CallToAction from "@/components/call-to-action";
 import DownloadAnas from "@/components/download-anas";
+import ScrollStatement from "@/components/scroll-statement";
 
 export default function Home() {
   return (
@@ -11,7 +11,7 @@ export default function Home() {
       <HeroSection />
       <DownloadAnas />
       <StatsSection />
-      <CallToAction />
+      <ScrollStatement />
     </main>
   );
 }

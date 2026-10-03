@@ -25,7 +25,7 @@ const stats = [
 
 export default function StatsSection() {
   return (
-    <section className="relative z-20 min-h-[500px] px-6 py-24 text-black">
+    <section className="relative z-20 min-h-125 px-6 py-24 text-black">
       <hr className="border-black/10" />
 
       <div className="mx-auto max-w-7xl">
@@ -37,7 +37,7 @@ export default function StatsSection() {
           {stats.map((stat, index) => (
             <div
               key={stat.label}
-              className={`group flex min-h-52 flex-col justify-between p-8 transition-all duration-300 hover:bg-black/[0.03] ${
+              className={`group flex min-h-52 flex-col justify-between p-8 transition-all duration-300 hover:bg-black/3 ${
                 index !== 0 ? "border-l border-black/10" : ""
               }`}
             >
