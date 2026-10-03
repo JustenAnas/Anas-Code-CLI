@@ -4,6 +4,7 @@ import StatsSection from "@/components/stats-section";
 import DownloadAnas from "@/components/download-anas";
 import ScrollStatement from "@/components/scroll-statement";
 import FeaturesSection from "@/components/features-section";
+import GettingStarted from "@/components/getting-started";
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <StatsSection />
       <ScrollStatement />
       <FeaturesSection />
+      <GettingStarted />
     </main>
   );
 }
