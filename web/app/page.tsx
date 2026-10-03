@@ -3,6 +3,7 @@ import HeroSection from "@/components/hero-section";
 import StatsSection from "@/components/stats-section";
 import DownloadAnas from "@/components/download-anas";
 import ScrollStatement from "@/components/scroll-statement";
+import FeaturesSection from "@/components/features-section";
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
       <DownloadAnas />
       <StatsSection />
       <ScrollStatement />
+      <FeaturesSection />
     </main>
   );
 }
