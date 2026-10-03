@@ -6,10 +6,26 @@ import DecryptedText from "@/components/DecryptedText";
 import { TextEffect } from "@/components/motion-primitives/text-effect";
 import { AnimatedGroup } from "@/components/motion-primitives/animated-group";
 import { transitionVariants } from "@/lib/utils";
+import Dither from "@/components/Dither";
 
 export default function HeroSection() {
   return (
     <main className="overflow-x-hidden">
+      <div className="absolute w-full h-dvh max-h-155 sm:max-h-115 md:max-h-125 lg:max-h-190 xl:max-h-195">
+        <Dither
+          waveColor={[
+            0.30980392156862746, 0.30980392156862746, 0.30980392156862746,
+          ]}
+          disableAnimation={false}
+          enableMouseInteraction
+          mouseRadius={0.3}
+          colorNum={4}
+          pixelSize={2}
+          waveAmplitude={0.3}
+          waveFrequency={3}
+          waveSpeed={0.05}
+        />
+      </div>
       <section className="lg:h-screen">
         <div className="grid grid-cols-1 grid-rows-2 pb-24 pt-12 md:pb-32 lg:grid-cols-2 lg:grid-rows-1 lg:pb-56 lg:pt-24">
           {/* Left side */}

@@ -10,16 +10,16 @@ export default function DownloadAnas() {
       <h2 className="text-4xl font-semibold text-white">ANAS CLI</h2>
 
       <p className="mt-6 max-w-xl text-lg text-white/60">
-        Your AI coding agent for understanding codebases, editing files,
-        running commands, and shipping faster.
+        Your AI coding agent for understanding codebases, editing files, running
+        commands, and shipping faster.
       </p>
 
       <button
-  type="button"
-  className="mt-10 cursor-pointer rounded-full bg-white px-7 py-3 text-sm font-medium text-black transition-transform duration-500 ease-out hover:scale-110"
->
-  Download
-</button>
+        type="button"
+        className="mt-10 cursor-pointer rounded-full bg-white px-7 py-3 text-sm font-medium text-black transition-transform duration-500 ease-out hover:scale-110"
+      >
+        Download
+      </button>
     </section>
   );
 }
