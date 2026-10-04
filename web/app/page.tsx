@@ -5,6 +5,8 @@ import DownloadAnas from "@/components/download-anas";
 import ScrollStatement from "@/components/scroll-statement";
 import FeaturesSection from "@/components/features-section";
 import GettingStarted from "@/components/getting-started";
+import TrustedByTeams from "@/components/trusted-by-teams";
+
 
 export default function Home() {
   return (
@@ -16,6 +18,7 @@ export default function Home() {
       <ScrollStatement />
       <FeaturesSection />
       <GettingStarted />
+      <TrustedByTeams />
     </main>
   );
 }
