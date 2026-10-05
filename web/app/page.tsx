@@ -6,7 +6,11 @@ import ScrollStatement from "@/components/scroll-statement";
 import FeaturesSection from "@/components/features-section";
 import GettingStarted from "@/components/getting-started";
 import TrustedByTeams from "@/components/trusted-by-teams";
-
+import PricingSection from "@/components/pricing-section";
+import ReviewsSection from "@/components/reviews-section";
+import FAQSection from "@/components/faq-section";
+import MoreInfoSection from "@/components/more-info-section";
+import Footer from "@/components/footer";
 
 export default function Home() {
   return (
@@ -19,6 +23,11 @@ export default function Home() {
       <FeaturesSection />
       <GettingStarted />
       <TrustedByTeams />
+      <PricingSection />
+      <ReviewsSection />
+      <FAQSection />
+      <MoreInfoSection />
+      <Footer />
     </main>
   );
 }
