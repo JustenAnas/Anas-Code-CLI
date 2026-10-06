@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MongoDB Authentication Starter
 
-## Getting Started
+A Next.js 16 App Router / TypeScript starter for:
 
-First, run the development server:
+- Sign up with `name`, `email`, and `password`
+- Log in with `email` and `password`
+- Request a password-reset OTP by email
+- Verify the OTP, then reset the password
+- Maintain server-side sessions with a hashed session token in MongoDB
+
+> This is backend architecture code. The existing `web/` app was not present in the provided sandbox, so these files are intentionally isolated and do not modify the ANAS CLI website prompt or UI.
+
+## Flow
+
+1. **Signup** → validate input → hash password with Argon2id → create user → issue HttpOnly session cookie.
+2. **Login** → compare Argon2id hash → create a random session token → store only its SHA-256 hash → set HttpOnly cookie.
+3. **Forgot password request** → always return a generic response → create a 6-digit OTP, store only its hash with a 10-minute expiry, send it by email.
+4. **Verify OTP** → validate email + OTP + purpose + expiry + attempt limit → issue a short-lived reset token cookie.
+5. **Reset password** → validate reset cookie → hash the new password → update user → invalidate all old sessions and reset token.
+6. **Logout** → delete the current session and clear the cookie.
+
+## Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm add mongodb argon2 jose zod nodemailer
+pnpm add -D @types/nodemailer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.example` to `.env.local`, fill in MongoDB and SMTP values, then copy `src/` into your Next.js app's `src/` directory.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Endpoints
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Method | Endpoint                            | Body                        |
+| ------ | ----------------------------------- | --------------------------- |
+| POST   | `/api/auth/signup`                  | `{ name, email, password }` |
+| POST   | `/api/auth/login`                   | `{ email, password }`       |
+| POST   | `/api/auth/logout`                  | none                        |
+| GET    | `/api/auth/me`                      | none                        |
+| POST   | `/api/auth/forgot-password/request` | `{ email }`                 |
+| POST   | `/api/auth/forgot-password/verify`  | `{ email, otp }`            |
+| POST   | `/api/auth/forgot-password/reset`   | `{ password }`              |
 
-## Learn More
+## Production checklist
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Use HTTPS so `Secure` cookies are effective.
+- Set a strong random `SESSION_SECRET` and rotate it through your secret manager.
+- Add rate limiting per IP and email to login and OTP routes.
+- Add a real email provider and SPF/DKIM/DMARC.
+- Add MongoDB indexes from `src/models/indexes.ts` during deployment.
+- Do not log passwords, OTPs, reset tokens, or raw session tokens.
+- Consider requiring email verification before granting normal access.
