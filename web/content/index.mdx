@@ -1,10 +1,109 @@
-# Welcome to ANAS CLI
+import TerminalCopyButton from "../components/terminal-copy-button";
 
-ANAS CLI is an AI coding agent designed to help developers work with their codebases.
+---
+title: Introduction
+description: Meet ANAS CLI, your terminal-based AI coding agent.
+---
 
-## What you'll learn
+<div className="anas-intro">
 
-- Getting started with ANAS CLI
-- Configuring AI providers
-- Using Ask, Agent, and Plan modes
-- Understanding tools and permissions
+<div className="anas-eyebrow">
+   
+  ANAS CLI · AI CODING AGENT
+</div>
+
+# Your codebase.
+# Your rules.
+
+Understand, plan, and build with an AI agent that works directly with your codebase from the terminal.
+
+<div className="anas-actions">
+
+<a className="anas-primary-action" href="/docs/getting-started/installation">Get started <span>→</span></a>
+
+<a className="anas-secondary-action" href="/docs/getting-started/quickstart">Quickstart <span>↗</span></a>
+
+</div>
+
+ 
+<div className="anas-terminal">
+  
+<div className="anas-terminal-bar">
+  <span>TERMINAL</span>
+  <TerminalCopyButton />
+</div>
+
+  <pre><code>npm run dev -- wakeup</code></pre>
+
+  <div className="anas-terminal-note">
+    <span className="anas-status-dot" />
+    <span>Ready to build.</span>
+  </div>
+</div>
+
+## One agent. Three ways to work.
+
+<div className="anas-mode-grid">
+
+<div className="anas-mode-card">
+<p className="anas-mode-number">01 / ASK</p>
+### Understand first
+Explore files, search code, and ask questions with read-only tools.
+[Explore Ask mode →](/docs/guides/modes)
+</div>
+
+<div className="anas-mode-card">
+<p className="anas-mode-number">02 / PLAN</p>
+### Think it through
+Turn a task into a plan and review the approach before execution.
+[Explore Plan mode →](/docs/guides/modes)
+</div>
+
+<div className="anas-mode-card">
+<p className="anas-mode-number">03 / AGENT</p>
+### Make it happen
+Work through coding tasks with tools and permission checks.
+[Explore Agent mode →](/docs/guides/modes)
+</div>
+
+</div>
+
+## Get moving
+
+<div className="anas-next-grid">
+
+<div>
+### 01. Install
+Set up ANAS CLI and configure your AI provider.
+[Installation guide →](/docs/getting-started/installation)
+</div>
+
+<div>
+### 02. Start a session
+```bash
+npm run dev -- chat --mode ask
+```
+Start by exploring your codebase.
+</div>
+
+<div>
+### 03. Choose your workflow
+```bash
+npm run dev -- chat --mode plan
+npm run dev -- chat --mode agent
+```
+Plan first or start working.
+</div>
+
+</div>
+
+## Made for real codebases
+
+- **Multiple providers** — Claude, OpenAI, OpenRouter, and Gemini.
+- **Practical tools** — read and edit files, search code, browse directories, run commands, and use Git.
+- **Permission checks** — approvals for sensitive operations.
+- **Flexible workflows** — Ask, Plan, and Agent modes.
+
+[Providers](/docs/configuration/providers) · [Tools & permissions](/docs/reference/tools) · [CLI commands](/docs/reference/commands)
+
+</div>
