@@ -1,0 +1,53 @@
+# Installation
+
+ANAS CLI is currently run from its source code.
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) installed
+- npm installed
+- The ANAS CLI repository cloned to your machine
+
+## 1. Open the project
+
+Open a terminal in the ANAS CLI project directory.
+
+## 2. Install dependencies
+
+Run:
+
+```bash
+npm install
+```
+
+## 3. Configure environment variables
+
+ANAS CLI uses a root-level `.env` file. Configure the provider credentials required by your setup before using AI features.
+
+Keep your API keys private. Never commit your `.env` file to Git.
+
+## 4. Start ANAS CLI
+
+Run the development command:
+
+```bash
+npm run dev
+```
+
+This executes `src/index.ts` through `tsx`.
+
+## 5. Build the project
+
+To compile the TypeScript project, run:
+
+```bash
+npm run build
+```
+
+The production start command is:
+
+```bash
+npm start
+```
+
+Run the production command after building successfully.

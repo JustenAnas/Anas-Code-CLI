@@ -5,11 +5,7 @@ import LoadingScreen from "@/components/loading-screen";
 
 const LOADING_SEEN_KEY = "anas-loading-seen";
 
-export default function SiteShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SiteShell({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [showSite, setShowSite] = useState(false);
 
@@ -37,9 +33,7 @@ export default function SiteShell({
       {loading && <LoadingScreen onComplete={handleComplete} />}
 
       {showSite && (
-        <div className="animate-in fade-in duration-700">
-          {children}
-        </div>
+        <div className="animate-in fade-in duration-700">{children}</div>
       )}
     </>
   );

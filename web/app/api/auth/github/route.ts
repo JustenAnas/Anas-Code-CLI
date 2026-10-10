@@ -22,8 +22,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const redirectUri =
-    "http://localhost:3000/api/auth/github/callback";
+  const redirectUri = "http://localhost:3000/api/auth/github/callback";
 
   const state = `${mode}:${randomBytes(32).toString("hex")}`;
 

@@ -53,8 +53,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const redirectUri =
-    "http://localhost:3000/api/auth/github/callback";
+  const redirectUri = "http://localhost:3000/api/auth/github/callback";
 
   try {
     const tokenResponse = await fetch(
@@ -90,16 +89,13 @@ export async function GET(request: Request) {
       );
     }
 
-    const profileResponse = await fetch(
-      "https://api.github.com/user",
-      {
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${tokens.access_token}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
+    const profileResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${tokens.access_token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
       },
-    );
+    });
 
     if (!profileResponse.ok) {
       return NextResponse.json(
@@ -110,16 +106,13 @@ export async function GET(request: Request) {
 
     const githubUser = await profileResponse.json();
 
-    const emailsResponse = await fetch(
-      "https://api.github.com/user/emails",
-      {
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${tokens.access_token}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
+    const emailsResponse = await fetch("https://api.github.com/user/emails", {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${tokens.access_token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
       },
-    );
+    });
 
     if (!emailsResponse.ok) {
       return NextResponse.json(
@@ -131,18 +124,14 @@ export async function GET(request: Request) {
     const emails = await emailsResponse.json();
 
     const primaryEmail = emails.find(
-      (email: {
-        email?: string;
-        primary?: boolean;
-        verified?: boolean;
-      }) => email.primary && email.verified,
+      (email: { email?: string; primary?: boolean; verified?: boolean }) =>
+        email.primary && email.verified,
     );
 
     if (!primaryEmail?.email) {
       return NextResponse.json(
         {
-          error:
-            "Your GitHub account does not have a verified primary email.",
+          error: "Your GitHub account does not have a verified primary email.",
         },
         { status: 400 },
       );
@@ -194,10 +183,7 @@ export async function GET(request: Request) {
       }
 
       const result = await users.insertOne({
-        name:
-          githubUser.name ||
-          githubUser.login ||
-          email.split("@")[0],
+        name: githubUser.name || githubUser.login || email.split("@")[0],
         email,
         provider: "github",
         providerId: String(githubUser.id),

@@ -151,11 +151,7 @@ function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg {...props} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path
         fill="#4285F4"
         d="M21.35 12.27c0-.78-.07-1.54-.2-2.27H12v4.3h5.22a4.46 4.46 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.93-4.18 2.93-7.4Z"
@@ -294,7 +290,9 @@ export default function SignupPage() {
 
   return (
     <main className="min-h-dvh bg-black text-white">
-      <style dangerouslySetInnerHTML={{ __html: gradientDrift + inputStyles }} />
+      <style
+        dangerouslySetInnerHTML={{ __html: gradientDrift + inputStyles }}
+      />
 
       <div className="grid min-h-dvh lg:grid-cols-2">
         <div className="flex items-center justify-center px-6 py-16 sm:px-10 lg:px-16">
@@ -322,10 +320,7 @@ export default function SignupPage() {
             {!otpStep ? (
               <form onSubmit={handleSubmit} className="mt-10 space-y-8">
                 {/* Name */}
-                <div
-                  className="anas-input__container"
-                  data-label="NAME"
-                >
+                <div className="anas-input__container" data-label="NAME">
                   <div className="anas-input__shadow" />
 
                   <div className="anas-input__icon">
@@ -356,10 +351,7 @@ export default function SignupPage() {
                 </div>
 
                 {/* Email */}
-                <div
-                  className="anas-input__container"
-                  data-label="EMAIL"
-                >
+                <div className="anas-input__container" data-label="EMAIL">
                   <div className="anas-input__shadow" />
 
                   <div className="anas-input__icon">
@@ -390,10 +382,7 @@ export default function SignupPage() {
                 </div>
 
                 {/* Password */}
-                <div
-                  className="anas-input__container"
-                  data-label="PASSWORD"
-                >
+                <div className="anas-input__container" data-label="PASSWORD">
                   <div className="anas-input__shadow" />
 
                   <div className="anas-input__icon">
@@ -429,9 +418,7 @@ export default function SignupPage() {
                         showPassword ? "Hide password" : "Show password"
                       }
                       onMouseDown={(event) => event.preventDefault()}
-                      onClick={() =>
-                        setShowPassword((visible) => !visible)
-                      }
+                      onClick={() => setShowPassword((visible) => !visible)}
                       className="absolute right-3 top-1/2 z-50 -translate-y-1/2 translate-z-[30px] text-black/50 transition-colors hover:text-black"
                     >
                       {showPassword ? (
@@ -443,17 +430,14 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {error && (
-                  <p className="text-sm text-red-400">{error}</p>
-                )}
+                {error && <p className="text-sm text-red-400">{error}</p>}
 
                 {/* OAuth */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => {
-                      window.location.href =
-                        "/api/auth/github?mode=signup";
+                      window.location.href = "/api/auth/github?mode=signup";
                     }}
                     className="flex h-11 items-center justify-center gap-2 border border-white/15 bg-white/[0.03] text-sm text-white/60 transition-colors hover:border-white/30 hover:text-white"
                   >
@@ -464,8 +448,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      window.location.href =
-                        "/api/auth/google?mode=signup";
+                      window.location.href = "/api/auth/google?mode=signup";
                     }}
                     className="flex h-11 items-center justify-center gap-2 border border-white/15 bg-white/[0.03] text-sm text-white/60 transition-colors hover:border-white/30 hover:text-white"
                   >
@@ -509,13 +492,7 @@ export default function SignupPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <rect
-                        width="18"
-                        height="18"
-                        x="3"
-                        y="3"
-                        rx="2"
-                      />
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
                       <path d="M8 12h8" />
                       <path d="M12 8v8" />
                     </svg>
@@ -531,18 +508,14 @@ export default function SignupPage() {
                     placeholder="6-DIGIT CODE"
                     value={otp}
                     onChange={(event) =>
-                      setOtp(
-                        event.target.value.replace(/\D/g, "").slice(0, 6),
-                      )
+                      setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
                     }
                     required
                     className="anas-input__search tracking-[0.4em]"
                   />
                 </div>
 
-                {error && (
-                  <p className="text-sm text-red-400">{error}</p>
-                )}
+                {error && <p className="text-sm text-red-400">{error}</p>}
 
                 <button
                   type="submit"

@@ -22,8 +22,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const redirectUri =
-    "http://localhost:3000/api/auth/google/callback";
+  const redirectUri = "http://localhost:3000/api/auth/google/callback";
 
   const state = `${mode}:${randomBytes(32).toString("hex")}`;
 

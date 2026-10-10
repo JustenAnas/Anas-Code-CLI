@@ -3,9 +3,7 @@ import { normalizeEmail, otpHash, sha256 } from "@/lib/auth";
 import { badRequest, json, otpSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const parsed = otpSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const parsed = otpSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
     return badRequest("Email and 6-digit OTP are required");
@@ -24,10 +22,9 @@ export async function POST(request: Request) {
   }
 
   if (record.otpHash !== otpHash(email, parsed.data.otp)) {
-    await db.collection("pendingSignups").updateOne(
-      { _id: record._id },
-      { $inc: { attempts: 1 } },
-    );
+    await db
+      .collection("pendingSignups")
+      .updateOne({ _id: record._id }, { $inc: { attempts: 1 } });
 
     return json({ error: "Invalid or expired code" }, 400);
   }
@@ -39,10 +36,7 @@ export async function POST(request: Request) {
       _id: record._id,
     });
 
-    return json(
-      { error: "An account already exists. Please log in." },
-      409,
-    );
+    return json({ error: "An account already exists. Please log in." }, 409);
   }
 
   const result = await db.collection("users").insertOne({
@@ -56,7 +50,6 @@ export async function POST(request: Request) {
   await db.collection("pendingSignups").deleteOne({
     _id: record._id,
   });
-
 
   return json({
     verified: true,

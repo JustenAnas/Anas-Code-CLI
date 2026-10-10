@@ -1,0 +1,74 @@
+# Common Errors
+
+Use this guide to troubleshoot common ANAS CLI setup and runtime problems.
+
+## Missing API key
+
+The `doctor` command currently checks for `ANTHROPIC_API_KEY`.
+
+1. Open the `.env` file in the ANAS CLI project root.
+2. Add your Anthropic API key:
+
+```bash
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+3. Save the file and retry:
+
+```bash
+npm run dev -- doctor
+```
+
+The guided `wakeup` flow runs this environment check before provider selection.
+
+## Unsupported mode
+
+If you see an error saying the mode is invalid, use one of:
+
+- `agent`
+- `ask`
+- `plan`
+
+For example:
+
+```bash
+npm run dev -- chat --mode ask
+```
+
+## Provider or API errors
+
+Check the following:
+
+- The selected provider's API key is configured in `.env`.
+- The key is valid and has the necessary access.
+- Your internet connection is working.
+- The provider's service is available.
+
+ANAS supports Claude, OpenAI, OpenRouter, and Gemini. The `doctor` command currently checks the Anthropic key specifically, so its result does not validate every provider.
+
+## Chat commands
+
+When an interactive chat session is running, type:
+
+```text
+/help
+```
+
+to see available chat commands.
+
+Use `/exit` to leave the session. Use `/new` to start a new session, and `/history` to view stored sessions. Use `/resume` to select a previous session.
+
+## Tool operation blocked
+
+A tool operation may be blocked because:
+
+- You denied its permission prompt.
+- A protected path requires authorization.
+- A terminal command was rejected by destructive-command guardrails.
+- The same operation failed three times.
+
+Review the requested operation and its path or command before trying again.
+
+## Still stuck?
+
+Record the full error message, the command you ran, your selected provider, and the selected mode. Remove API keys and other secrets before sharing logs.

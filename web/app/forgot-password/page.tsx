@@ -1,4 +1,3 @@
-
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -12,7 +11,7 @@ export default function ForgotPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [step, setStep] = useState<"email" | "otp" | "password">("email");
 
@@ -35,9 +34,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
 
-    return `${minutes}:${remainingSeconds
-      .toString()
-      .padStart(2, "0")}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   }
 
   function handleOtpChange(index: number, value: string) {
@@ -58,18 +55,12 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     index: number,
     event: React.KeyboardEvent<HTMLInputElement>,
   ) {
-    if (
-      event.key === "Backspace" &&
-      !otp[index] &&
-      index > 0
-    ) {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
     }
   }
 
-  async function handleRequestCode(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setMessage("");
@@ -93,8 +84,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
       }
 
       setMessage(
-        data.message ||
-          "If an account exists, a reset code has been sent.",
+        data.message || "If an account exists, a reset code has been sent.",
       );
 
       setTimeLeft(OTP_DURATION);
@@ -106,9 +96,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     }
   }
 
-  async function handleVerifyOtp(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleVerifyOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setMessage("");
@@ -151,9 +139,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     }
   }
 
-  async function handleResetPassword(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleResetPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setMessage("");
@@ -224,8 +210,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
                 {step === "email" &&
                   "Enter your email and we'll send you a verification code."}
 
-                {step === "otp" &&
-                  `Enter the 6-digit code sent to ${email}.`}
+                {step === "otp" && `Enter the 6-digit code sent to ${email}.`}
 
                 {step === "password" &&
                   "Choose a new password for your ANAS CLI account."}
@@ -233,10 +218,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
             </div>
 
             {step === "email" && (
-              <form
-                onSubmit={handleRequestCode}
-                className="space-y-5"
-              >
+              <form onSubmit={handleRequestCode} className="space-y-5">
                 <div>
                   <label
                     htmlFor="email"
@@ -252,19 +234,13 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
                     autoComplete="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
-                    }
+                    onChange={(event) => setEmail(event.target.value)}
                     required
                     className="mt-2 h-12 w-full border border-white/15 bg-white/[0.03] px-4 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/50"
                   />
                 </div>
 
-                {error && (
-                  <p className="text-sm text-red-400">
-                    {error}
-                  </p>
-                )}
+                {error && <p className="text-sm text-red-400">{error}</p>}
 
                 <button
                   type="submit"
@@ -277,10 +253,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
             )}
 
             {step === "otp" && (
-              <form
-                onSubmit={handleVerifyOtp}
-                className="space-y-6"
-              >
+              <form onSubmit={handleVerifyOtp} className="space-y-6">
                 <div>
                   <label className="text-sm font-medium text-white/70">
                     Verification code
@@ -293,39 +266,22 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
                         id={`otp-${index}`}
                         type="text"
                         inputMode="numeric"
-                        autoComplete={
-                          index === 0
-                            ? "one-time-code"
-                            : "off"
-                        }
+                        autoComplete={index === 0 ? "one-time-code" : "off"}
                         maxLength={1}
                         value={digit}
                         onChange={(event) =>
-                          handleOtpChange(
-                            index,
-                            event.target.value,
-                          )
+                          handleOtpChange(index, event.target.value)
                         }
-                        onKeyDown={(event) =>
-                          handleOtpKeyDown(index, event)
-                        }
+                        onKeyDown={(event) => handleOtpKeyDown(index, event)}
                         className="h-14 w-full border border-white/15 bg-white/[0.03] text-center text-xl font-semibold text-white outline-none transition-colors focus:border-white/50"
                       />
                     ))}
                   </div>
                 </div>
 
-                {message && (
-                  <p className="text-sm text-green-400">
-                    {message}
-                  </p>
-                )}
+                {message && <p className="text-sm text-green-400">{message}</p>}
 
-                {error && (
-                  <p className="text-sm text-red-400">
-                    {error}
-                  </p>
-                )}
+                {error && <p className="text-sm text-red-400">{error}</p>}
 
                 {timeLeft > 0 ? (
                   <p className="font-mono text-xs text-white/40">
@@ -365,91 +321,82 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
             )}
 
             {step === "password" && (
-              <form
-                onSubmit={handleResetPassword}
-                className="space-y-5"
-              >
+              <form onSubmit={handleResetPassword} className="space-y-5">
                 <div>
-  <label
-    htmlFor="password"
-    className="text-sm font-medium text-white/70"
-  >
-    New password
-  </label>
+                  <label
+                    htmlFor="password"
+                    className="text-sm font-medium text-white/70"
+                  >
+                    New password
+                  </label>
 
-  <div className="relative mt-2">
-    <input
-      id="password"
-      name="password"
-      type={showPassword ? "text" : "password"}
-      autoComplete="new-password"
-      placeholder="At least 8 characters"
-      value={password}
-      onChange={(event) => setPassword(event.target.value)}
-      required
-      className="h-12 w-full border border-white/15 bg-white/[0.03] px-4 pr-12 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/50"
-    />
+                  <div className="relative mt-2">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="At least 8 characters"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      className="h-12 w-full border border-white/15 bg-white/[0.03] px-4 pr-12 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/50"
+                    />
 
-    <button
-      type="button"
-      aria-label={showPassword ? "Hide password" : "Show password"}
-      onClick={() => setShowPassword((visible) => !visible)}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
-    >
-      {showPassword ? "◉" : "◌"}
-    </button>
-  </div>
-</div>
+                    <button
+                      type="button"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
+                    >
+                      {showPassword ? "◉" : "◌"}
+                    </button>
+                  </div>
+                </div>
 
-<div>
-  <label
-    htmlFor="confirmPassword"
-    className="text-sm font-medium text-white/70"
-  >
-    Confirm password
-  </label>
+                <div>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="text-sm font-medium text-white/70"
+                  >
+                    Confirm password
+                  </label>
 
-  <div className="relative mt-2">
-    <input
-      id="confirmPassword"
-      name="confirmPassword"
-      type={showConfirmPassword ? "text" : "password"}
-      autoComplete="new-password"
-      placeholder="Enter your password again"
-      value={confirmPassword}
-      onChange={(event) => setConfirmPassword(event.target.value)}
-      required
-      className="h-12 w-full border border-white/15 bg-white/[0.03] px-4 pr-12 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/50"
-    />
+                  <div className="relative mt-2">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Enter your password again"
+                      value={confirmPassword}
+                      onChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
+                      required
+                      className="h-12 w-full border border-white/15 bg-white/[0.03] px-4 pr-12 text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/50"
+                    />
 
-    <button
-      type="button"
-      aria-label={
-        showConfirmPassword
-          ? "Hide password"
-          : "Show password"
-      }
-      onClick={() =>
-        setShowConfirmPassword((visible) => !visible)
-      }
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
-    >
-      {showConfirmPassword ? "◉" : "◌"}
-    </button>
-  </div>
-</div>
+                    <button
+                      type="button"
+                      aria-label={
+                        showConfirmPassword ? "Hide password" : "Show password"
+                      }
+                      onClick={() =>
+                        setShowConfirmPassword((visible) => !visible)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
+                    >
+                      {showConfirmPassword ? "◉" : "◌"}
+                    </button>
+                  </div>
+                </div>
 
-                {message && (
-                  <p className="text-sm text-green-400">
-                    {message}
-                  </p>
-                )}
+                {message && <p className="text-sm text-green-400">{message}</p>}
 
-                {error && (
-                  <p className="text-sm text-red-400">
-                    {error}
-                  </p>
-                )}
+                {error && <p className="text-sm text-red-400">{error}</p>}
 
                 <button
                   type="submit"
@@ -475,4 +422,3 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     </main>
   );
 }
-

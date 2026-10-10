@@ -1,0 +1,46 @@
+# AI Providers
+
+ANAS CLI supports four AI providers.
+
+## Supported providers
+
+| Provider   | Environment variable |
+| ---------- | -------------------- |
+| Claude     | `ANTHROPIC_API_KEY`  |
+| OpenAI     | `OPENAI_API_KEY`     |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Gemini     | `GEMINI_API_KEY`     |
+
+## Configure your API key
+
+Create a `.env` file in the ANAS CLI project root.
+
+Add the key for the provider you want to use:
+
+```bash
+ANTHROPIC_API_KEY=your_anthropic_api_key
+OPENAI_API_KEY=your_openai_api_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+Replace each placeholder with your own key. You only need to configure the credentials for the provider you intend to use.
+
+Never commit API keys to version control or share them publicly.
+
+## Selecting a provider
+
+The guided `wakeup` command includes a provider-selection step.
+
+The provider factory also supports these provider identifiers:
+
+- `claude`
+- `openai`
+- `openrouter`
+- `gemini`
+
+## Important implementation detail
+
+The current `doctor` command checks `ANTHROPIC_API_KEY` specifically. It may report that the environment is not ready even if you have configured a different provider's key.
+
+Provider selection and API-key validation should be checked against the current CLI implementation when troubleshooting connection errors.

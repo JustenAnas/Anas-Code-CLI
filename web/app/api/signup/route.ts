@@ -1,17 +1,10 @@
 import { getDb } from "@/lib/mongodb";
-import {
-  hashPassword,
-  newOtp,
-  normalizeEmail,
-  otpHash,
-} from "@/lib/auth";
+import { hashPassword, newOtp, normalizeEmail, otpHash } from "@/lib/auth";
 import { sendPasswordResetOtp } from "@/lib/mail";
 import { badRequest, json, signupSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const parsed = signupSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const parsed = signupSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
     return badRequest(

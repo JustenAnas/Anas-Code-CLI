@@ -1,0 +1,51 @@
+# Ask, Agent, and Plan Modes
+
+ANAS CLI exposes three modes: Ask, Agent, and Plan.
+
+## Select a mode
+
+Use the `--mode` option when starting an interactive chat:
+
+```bash
+npm run dev -- chat --mode ask
+npm run dev -- chat --mode agent
+npm run dev -- chat --mode plan
+```
+
+The default mode is `agent`.
+
+## Ask mode
+
+Use Ask mode when you want to ask questions about code or discuss an implementation.
+
+Example prompts:
+
+- Explain how this function works.
+- What does this error mean?
+- How could this module be simplified?
+
+## Agent mode
+
+Use Agent mode when you want help carrying out a coding task.
+
+Example prompts:
+
+- Help me implement input validation.
+- Find where this function is called.
+- Help me fix this failing test.
+
+Always review generated changes before relying on them.
+
+## Plan mode
+
+Use Plan mode when you want to work through an implementation approach before making changes.
+
+Example prompts:
+
+- Outline the steps to add authentication.
+- Identify which modules need to change for this feature.
+- Propose an approach for handling API errors.
+
+## Current implementation
+
+These mode names are accepted by the CLI, but mode-specific behavior depends on the interactive chat implementation. The one-shot `talk` command currently sends the prompt directly to the selected provider and does not accept a mode option.

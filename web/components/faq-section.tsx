@@ -95,10 +95,7 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section
-      id="faq"
-      className="relative z-10 bg-white px-6 py-32 text-black"
-    >
+    <section id="faq" className="relative z-10 bg-white px-6 py-32 text-black">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
           <div>
@@ -113,8 +110,7 @@ export default function FAQSection() {
             </h2>
 
             <p className="mt-10 max-w-md text-lg leading-relaxed text-black/50 md:text-xl">
-              Everything you need to know before you start building with
-              ANAS.
+              Everything you need to know before you start building with ANAS.
             </p>
           </div>
 
@@ -125,9 +121,7 @@ export default function FAQSection() {
                 question={faq.question}
                 answer={faq.answer}
                 open={openIndex === index}
-                onClick={() =>
-                  setOpenIndex(openIndex === index ? null : index)
-                }
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
               />
             ))}
           </div>

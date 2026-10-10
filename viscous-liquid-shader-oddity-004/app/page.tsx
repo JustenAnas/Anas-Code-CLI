@@ -1,4 +1,4 @@
-import OilShader from "@/components/oil-shader"
+import OilShader from "@/components/oil-shader";
 
 export default function Page() {
   return (
@@ -21,5 +21,5 @@ export default function Page() {
         webgl · fluid sim
       </div>
     </main>
-  )
+  );
 }

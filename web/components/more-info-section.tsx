@@ -37,8 +37,8 @@ export default function MoreInfoSection() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-black/50 md:text-xl">
-            Explore the documentation, learn how ANAS works, and find
-            everything you need to get started.
+            Explore the documentation, learn how ANAS works, and find everything
+            you need to get started.
           </p>
         </div>
 

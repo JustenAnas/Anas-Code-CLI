@@ -66,9 +66,8 @@ export default function TrustedByTeams() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-black/50 md:text-xl">
-            From first idea to production, ANAS is built for developers who
-            want to spend less time fighting their tools and more time
-            building.
+            From first idea to production, ANAS is built for developers who want
+            to spend less time fighting their tools and more time building.
           </p>
         </div>
 

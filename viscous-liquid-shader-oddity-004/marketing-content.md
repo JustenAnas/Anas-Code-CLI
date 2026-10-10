@@ -334,7 +334,7 @@ Recommended specs: 1920×1080 or 1280×720, 60fps, MP4 (for X/LinkedIn) and a lo
 
 - **Why no libraries?** Maximum control over the look, zero dependency overhead, a single file you can read top-to-bottom.
 - **How long did it take?** A single afternoon in v0, including the iterations on the look-and-feel.
-- **What's the trickiest part?** Making the surface read as *true* black at rest while still allowing cinematic iridescence inside the trails. Solved by gating thin-film thickness and specular highlights behind the dye mask, plus a black-point crush in the tonemap.
+- **What's the trickiest part?** Making the surface read as _true_ black at rest while still allowing cinematic iridescence inside the trails. Solved by gating thin-film thickness and specular highlights behind the dye mask, plus a black-point crush in the tonemap.
 - **Can I use this in production?** Yes — it's MIT-licensed, gracefully falls back when WebGL2 or float textures are unavailable, caps DPR at 2, and pauses when the tab is hidden.
 - **Will it work on mobile?** It runs, but the experience is built around a precise pointer. A pointer-events touch path is a natural follow-up.
 - **How do I make it look like mercury / honey / water?** Change `base`, `envCool`, `envWarm`, and the `thinFilm` thickness multiplier in the render fragment shader. Three numbers and you have a different liquid.

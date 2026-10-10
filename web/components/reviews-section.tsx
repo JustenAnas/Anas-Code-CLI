@@ -135,8 +135,7 @@ const reviewPages = [
       role: "Backend Developer",
     },
     {
-      quote:
-        "This is the kind of developer tooling I've wanted for years.",
+      quote: "This is the kind of developer tooling I've wanted for years.",
       name: "Amelia Hall",
       role: "Software Engineer",
     },
@@ -200,7 +199,7 @@ function ReviewRow({
   reviews,
   reverse = false,
 }: {
-  reviews: typeof reviewPages[number];
+  reviews: (typeof reviewPages)[number];
   reverse?: boolean;
 }) {
   const repeatedReviews = [...reviews, ...reviews];
@@ -249,18 +248,15 @@ export default function ReviewsSection() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-white/40 md:text-xl">
-            Developers use ANAS to understand their codebases, move faster,
-            and spend more time building.
+            Developers use ANAS to understand their codebases, move faster, and
+            spend more time building.
           </p>
         </div>
 
         <div className="mt-28 space-y-5">
           <ReviewRow reviews={reviews.slice(0, 3)} />
 
-          <ReviewRow
-            reviews={reviews.slice(3, 6)}
-            reverse
-          />
+          <ReviewRow reviews={reviews.slice(3, 6)} reverse />
 
           <ReviewRow reviews={reviews.slice(6, 9)} />
         </div>

@@ -1,0 +1,89 @@
+# CLI Commands
+
+ANAS CLI provides commands for interactive sessions, one-shot prompts, and environment checks.
+
+## `wakeup`
+
+Start the guided setup flow, including provider and mode selection.
+
+```bash
+npm run dev -- wakeup
+```
+
+Show token usage and cost when supported:
+
+```bash
+npm run dev -- wakeup --verbose
+```
+
+## `chat`
+
+Start an interactive streaming chat session. The default mode is `agent`.
+
+```bash
+npm run dev -- chat
+npm run dev -- chat --mode ask
+npm run dev -- chat --mode plan
+npm run dev -- chat --mode agent
+```
+
+Options:
+
+- `-m, --mode <mode>`: Select `ask`, `agent`, or `plan`.
+- `-v, --verbose`: Show token usage and cost.
+
+## `talk`
+
+Send one prompt and stream the response.
+
+```bash
+npm run dev -- talk "Explain this project's structure"
+```
+
+Options:
+
+- `-v, --verbose`: Show token usage and cost.
+
+The current implementation defaults to the OpenRouter provider for this command.
+
+## `doctor`
+
+Check the Node.js version and whether the Anthropic API key is configured.
+
+```bash
+npm run dev -- doctor
+```
+
+Node.js 18 or higher is required by this check.
+
+## `banner`
+
+Display the welcome banner.
+
+```bash
+npm run dev -- banner
+```
+
+## `hello`
+
+Print a greeting.
+
+```bash
+npm run dev -- hello
+```
+
+## Help and version
+
+Display the available commands and options:
+
+```bash
+npm run dev -- --help
+```
+
+Display the CLI version:
+
+```bash
+npm run dev -- --version
+```
+
+The current CLI version is `0.1.0`.

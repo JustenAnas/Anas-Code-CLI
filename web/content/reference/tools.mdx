@@ -1,0 +1,62 @@
+# Tools & Permissions
+
+ANAS CLI uses tools to inspect project files, make changes, run commands, and inspect Git state.
+
+## Available tools
+
+| Tool          | Purpose                                              |
+| ------------- | ---------------------------------------------------- |
+| `read_file`   | Read a file                                          |
+| `write_file`  | Create or overwrite a file                           |
+| `edit_file`   | Replace exact text in a file                         |
+| `bash`        | Run a terminal command                               |
+| `glob`        | Find files using a glob pattern                      |
+| `list_dir`    | List a directory                                     |
+| `search_code` | Search project file contents                         |
+| `git`         | Inspect repository status, diffs, logs, and branches |
+
+## Tool access by mode
+
+### Ask mode
+
+Ask mode allows read-only inspection tools:
+
+- `read_file`
+- `search_code`
+- `glob`
+- `list_dir`
+
+It does not allow file-writing, editing, terminal, or Git tools through the mode's tool allowlist.
+
+### Agent mode
+
+Agent mode can access all eight registered tools, subject to permission checks and guardrails.
+
+### Plan mode
+
+Plan mode currently has no tools enabled. It cannot use the registered tools through the current tool allowlist.
+
+## Permission prompts
+
+ANAS requests confirmation before running these tools:
+
+- `bash`
+- `write_file`
+- `edit_file`
+
+The prompt displays the operation details and asks whether to allow it. If permission is denied, that exact operation is blocked from being retried.
+
+## Guardrails
+
+Before execution, ANAS checks file-writing and editing operations against protected-path rules. Certain restricted changes require explicit authorization in the user's prompt.
+
+Terminal commands are checked against destructive-command guardrails before execution.
+
+ANAS also stops retrying an identical operation after three failures.
+
+## Important notes
+
+- Permission prompts are not a replacement for reviewing commands and file changes.
+- Read tool output carefully before using it to make decisions.
+- Review changes before committing or deploying your project.
+- Tool availability depends on the selected mode and the current implementation.

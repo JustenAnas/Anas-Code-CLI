@@ -76,8 +76,8 @@ export default function PricingSection() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-white/70 md:text-xl">
-            Start free, upgrade when you need more power, and keep building
-            with ANAS.
+            Start free, upgrade when you need more power, and keep building with
+            ANAS.
           </p>
         </div>
 
@@ -132,23 +132,16 @@ export default function PricingSection() {
 
               <div className="space-y-4">
                 {plan.features.map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex gap-3 text-sm"
-                  >
+                  <div key={feature} className="flex gap-3 text-sm">
                     <span
-                      className={
-                        plan.featured ? "text-white" : "text-black"
-                      }
+                      className={plan.featured ? "text-white" : "text-black"}
                     >
                       ✓
                     </span>
 
                     <span
                       className={
-                        plan.featured
-                          ? "text-white/60"
-                          : "text-black/60"
+                        plan.featured ? "text-white/60" : "text-black/60"
                       }
                     >
                       {feature}
@@ -160,9 +153,7 @@ export default function PricingSection() {
               <button
                 type="button"
                 className={`mt-auto w-full rounded-full px-5 py-3 text-sm font-semibold transition-all duration-300 hover:scale-[1.03] ${
-                  plan.featured
-                    ? "bg-white text-black"
-                    : "bg-black text-white"
+                  plan.featured ? "bg-white text-black" : "bg-black text-white"
                 }`}
               >
                 Get started

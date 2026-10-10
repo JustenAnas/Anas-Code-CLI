@@ -1,0 +1,65 @@
+# Quickstart
+
+Get your first ANAS CLI session running.
+
+## 1. Check your setup
+
+Run:
+
+```bash
+npm run dev -- doctor
+```
+
+The doctor command checks your Node.js version and required Anthropic API key.
+
+## 2. Start the guided experience
+
+Run:
+
+```bash
+npm run dev -- wakeup
+```
+
+The guided startup displays the banner, checks prerequisites, and lets you select a provider and mode before chatting.
+
+## 3. Start a chat directly
+
+To launch an interactive session in Agent mode:
+
+```bash
+npm run dev -- chat
+```
+
+Choose a mode explicitly:
+
+```bash
+npm run dev -- chat --mode ask
+npm run dev -- chat --mode plan
+npm run dev -- chat --mode agent
+```
+
+## 4. Send a one-shot prompt
+
+Use `talk` to send a single prompt:
+
+```bash
+npm run dev -- talk "Explain the structure of this project"
+```
+
+## 5. Show token usage and cost
+
+Add `--verbose` to supported commands:
+
+```bash
+npm run dev -- chat --verbose
+npm run dev -- wakeup --verbose
+npm run dev -- talk "Explain this function" --verbose
+```
+
+## More commands
+
+- `banner` displays the welcome banner.
+- `hello` prints a greeting.
+- `doctor` checks whether the environment is ready.
+
+Use `npm run dev -- --help` to display the available CLI commands.
