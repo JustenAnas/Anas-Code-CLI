@@ -1,3 +1,4 @@
+
 import OpenAI from "openai";
 import {
   ProviderError,
@@ -165,23 +166,28 @@ export class OpenAIProvider implements BaseProvider {
       }
 
       if (message.role === "assistant") {
-        if (message.toolCall) {
+        const toolCalls =
+          message.toolCalls ??
+          (message.toolCall ? [message.toolCall] : []);
+
+        if (toolCalls.length > 0) {
           result.push({
             role: "assistant",
             content: message.content || null,
-            tool_calls: [
-              {
-                id: message.toolCall.id,
-                type: "function",
-                function: {
-                  name: message.toolCall.name,
-                  arguments: JSON.stringify(message.toolCall.input),
-                },
+            tool_calls: toolCalls.map((toolCall) => ({
+              id: toolCall.id,
+              type: "function" as const,
+              function: {
+                name: toolCall.name,
+                arguments: JSON.stringify(toolCall.input),
               },
-            ],
+            })),
           });
         } else {
-          result.push({ role: "assistant", content: message.content });
+          result.push({
+            role: "assistant",
+            content: message.content,
+          });
         }
       }
 
@@ -209,16 +215,20 @@ export class OpenAIProvider implements BaseProvider {
       });
 
       const message = response.choices[0].message;
-      const toolCall = message.tool_calls?.[0];
 
-      if (toolCall && toolCall.type === "function") {
+      const toolCalls: ToolCall[] = (message.tool_calls ?? [])
+        .filter((call) => call.type === "function")
+        .map((call) => ({
+          id: call.id,
+          name: call.function.name,
+          input: JSON.parse(call.function.arguments || "{}"),
+        }));
+
+      if (toolCalls.length > 0) {
         return {
           content: message.content ?? "",
-          toolCall: {
-            id: toolCall.id,
-            name: toolCall.function.name,
-            input: JSON.parse(toolCall.function.arguments || "{}"),
-          },
+          toolCall: toolCalls[0],
+          toolCalls,
           inputTokens: response.usage?.prompt_tokens,
           outputTokens: response.usage?.completion_tokens,
         };
@@ -279,9 +289,11 @@ export class OpenAIProvider implements BaseProvider {
   ): Promise<ProviderResponse> {
     try {
       let fullContent = "";
-      let toolCallId = "";
-      let toolCallName = "";
-      let toolCallArguments = "";
+
+      const toolCallsByIndex = new Map<
+        number,
+        { id: string; name: string; arguments: string }
+      >();
 
       const stream = await this.client.chat.completions.create({
         model: this.model,
@@ -296,10 +308,12 @@ export class OpenAIProvider implements BaseProvider {
 
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta;
+
         if (chunk.usage) {
           inputTokens = chunk.usage.prompt_tokens;
           outputTokens = chunk.usage.completion_tokens;
         }
+
         const text = delta?.content ?? "";
 
         if (text) {
@@ -307,35 +321,44 @@ export class OpenAIProvider implements BaseProvider {
           onChunk(text);
         }
 
-        const toolCall = delta?.tool_calls?.[0];
+        for (const toolCall of delta?.tool_calls ?? []) {
+          const index = toolCall.index;
 
-        if (toolCall) {
-          if (toolCall.id) toolCallId = toolCall.id;
-          if (toolCall.function?.name) toolCallName = toolCall.function.name;
-          if (toolCall.function?.arguments) {
-            toolCallArguments += toolCall.function.arguments;
+          const existing = toolCallsByIndex.get(index) ?? {
+            id: "",
+            name: "",
+            arguments: "",
+          };
+
+          if (toolCall.id) {
+            existing.id = toolCall.id;
           }
+
+          if (toolCall.function?.name) {
+            existing.name += toolCall.function.name;
+          }
+
+          if (toolCall.function?.arguments) {
+            existing.arguments += toolCall.function.arguments;
+          }
+
+          toolCallsByIndex.set(index, existing);
         }
       }
 
-      if (toolCallName) {
-        let parsedInput: Record<string, string> = {};
-
-        try {
-          parsedInput = JSON.parse(toolCallArguments || "{}");
-        } catch {
-          parsedInput = {};
-        }
-
-        const toolCall: ToolCall = {
-          id: toolCallId,
-          name: toolCallName,
-          input: parsedInput,
-        };
+      if (toolCallsByIndex.size > 0) {
+        const toolCalls: ToolCall[] = [...toolCallsByIndex.values()].map(
+          (call) => ({
+            id: call.id,
+            name: call.name,
+            input: JSON.parse(call.arguments || "{}"),
+          }),
+        );
 
         return {
           content: fullContent,
-          toolCall,
+          toolCall: toolCalls[0],
+          toolCalls,
           inputTokens,
           outputTokens,
         };

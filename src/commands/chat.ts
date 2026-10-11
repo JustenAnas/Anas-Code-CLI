@@ -158,7 +158,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
           process.stdout.write(chunk);
         },
-        undefined,
+         (status) => console.log(`\n[DEBUG] ${status}`),
         "",
         verbose,
         mode,
@@ -199,10 +199,10 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
               process.stdout.write(chunk);
             },
-            undefined,
-            "",
-            verbose,
-            mode,
+             (status) => console.log(`\n[DEBUG] ${status}`),
+        "",
+        verbose,
+        mode,
           );
 
           // stopSpinner();

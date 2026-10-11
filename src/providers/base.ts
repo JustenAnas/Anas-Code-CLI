@@ -3,6 +3,7 @@ export type Message = {
   content: string;
   toolCallId?: string;
   toolCall?: ToolCall;
+  toolCalls?: ToolCall[];
 };
 
 export type ToolCall = {
@@ -14,6 +15,7 @@ export type ToolCall = {
 export type ProviderResponse = {
   content: string;
   toolCall?: ToolCall;
+  toolCalls?: ToolCall[];
   inputTokens?: number;
   outputTokens?: number;
 };
