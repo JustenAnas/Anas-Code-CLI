@@ -557,3 +557,20 @@
   outline: 2px solid var(--anas-accent);
   outline-offset: 2px;
 }
+:root {
+  --radius: 0.5rem;
+}
+
+.dark {
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+.retro {
+  font-family: "Courier New", monospace;
+  image-rendering: pixelated;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  object-fit: contain;
+}
