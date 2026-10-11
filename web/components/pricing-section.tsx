@@ -1,11 +1,59 @@
 "use client";
 
+import { useState } from "react";
 import OilShader from "@/components/oil-shader";
 
-const plans = [
+type PlanName = "Free" | "Builder" | "Pro" | "Scale";
+type Currency = "USD" | "INR";
+
+type RazorpayOrder = {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  plan: PlanName;
+};
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => void;
+  modal: {
+    ondismiss: () => void;
+  };
+  theme: {
+    color: string;
+  };
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (
+      options: RazorpayOptions
+    ) => {
+      open: () => void;
+    };
+  }
+}
+
+const plans: {
+  name: PlanName;
+  price: number;
+  description: string;
+  features: string[];
+  featured: boolean;
+}[] = [
   {
     name: "Free",
-    price: "$0",
+    price: 0,
     description: "For trying ANAS and getting started.",
     features: [
       "Basic AI coding agent",
@@ -17,7 +65,7 @@ const plans = [
   },
   {
     name: "Builder",
-    price: "$19",
+    price: 19,
     description: "For developers building every day.",
     features: [
       "Everything in Free",
@@ -29,7 +77,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$49",
+    price: 49,
     description: "For serious development workflows.",
     features: [
       "Everything in Builder",
@@ -41,7 +89,7 @@ const plans = [
   },
   {
     name: "Scale",
-    price: "$99",
+    price: 99,
     description: "For teams shipping at higher velocity.",
     features: [
       "Everything in Pro",
@@ -53,17 +101,118 @@ const plans = [
   },
 ];
 
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () =>
+        resolve(Boolean(window.Razorpay))
+      );
+      existingScript.addEventListener("error", () => resolve(false));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(Boolean(window.Razorpay));
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function PricingSection() {
+  const [currency, setCurrency] = useState<Currency>("USD");
+  const [loadingPlan, setLoadingPlan] = useState<PlanName | null>(null);
+  const [message, setMessage] = useState("");
+
+  function getPrice(plan: (typeof plans)[number]) {
+    const symbol = currency === "USD" ? "$" : "₹";
+    return `${symbol}${plan.price}`;
+  }
+
+  async function handleCheckout(plan: (typeof plans)[number]) {
+    setLoadingPlan(plan.name);
+    setMessage("");
+
+    try {
+      const loaded = await loadRazorpay();
+
+      if (!loaded || !window.Razorpay) {
+        throw new Error("Could not load Razorpay Checkout.");
+      }
+
+      const response = await fetch("/api/razorpay/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan: plan.name,
+          currency,
+        }),
+      });
+
+      const order = (await response.json()) as
+        | RazorpayOrder
+        | { error: string };
+
+      if (!response.ok || !("orderId" in order)) {
+        throw new Error(
+          "error" in order ? order.error : "Could not create order."
+        );
+      }
+
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "ANAS CLI",
+        description:
+          plan.name === "Free"
+            ? `ANAS CLI Free — ${currency === "USD" ? "$1 USD" : "₹1 INR"} test payment`
+            : `ANAS CLI ${plan.name} — ${getPrice(plan)} ${currency}`,
+        order_id: order.orderId,
+        theme: {
+          color: "#000000",
+        },
+        handler: (payment) => {
+          setMessage(
+            `Payment ID: ${payment.razorpay_payment_id}. ` +
+              "Payment is not yet verified server-side."
+          );
+        },
+        modal: {
+          ondismiss: () => setMessage("Checkout closed."),
+        },
+      });
+
+      checkout.open();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <section className="relative z-10 overflow-hidden bg-black px-6 py-32 text-white">
-      {/* Viscous liquid fills the entire pricing section */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <OilShader />
       </div>
 
-      {/* Pricing content sits inside the viscous liquid */}
       <div className="relative z-10 mx-auto max-w-7xl">
-        {/* Heading */}
         <div className="max-w-5xl">
           <p className="text-base font-semibold uppercase tracking-[0.25em] text-white/70">
             Pricing
@@ -76,13 +225,34 @@ export default function PricingSection() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-white/70 md:text-xl">
-            Start free, upgrade when you need more power, and keep building with
-            ANAS.
+            Start free, upgrade when you need more power, and keep building
+            with ANAS.
           </p>
         </div>
 
-        {/* Pricing cards */}
-        <div className="mt-24 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Currency toggle */}
+<div className="mt-12 flex justify-center">
+  <div className="flex gap-2 rounded-full bg-transparent p-1">
+    {(["USD", "INR"] as const).map((option) => (
+      <button
+        key={option}
+        type="button"
+        onClick={() => setCurrency(option)}
+        aria-pressed={currency === option}
+        className={`rounded-full border px-6 py-3 text-sm font-semibold transition-all duration-200 ${
+          currency === option
+            ? "border-black bg-black text-white"
+            : "border-white bg-white text-black hover:bg-white/90"
+        }`}
+      >
+        {option === "USD" ? "$ USD" : "₹ INR"}
+      </button>
+    ))}
+  </div>
+</div>
+
+
+        <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -103,7 +273,7 @@ export default function PricingSection() {
 
                 <div className="mt-8 flex items-end gap-2">
                   <span className="text-5xl font-bold tracking-[-0.05em]">
-                    {plan.price}
+                    {getPrice(plan)}
                   </span>
 
                   <span
@@ -138,7 +308,6 @@ export default function PricingSection() {
                     >
                       ✓
                     </span>
-
                     <span
                       className={
                         plan.featured ? "text-white/60" : "text-black/60"
@@ -152,19 +321,37 @@ export default function PricingSection() {
 
               <button
                 type="button"
-                className={`mt-auto w-full rounded-full px-5 py-3 text-sm font-semibold transition-all duration-300 hover:scale-[1.03] ${
-                  plan.featured ? "bg-white text-black" : "bg-black text-white"
+                onClick={() => void handleCheckout(plan)}
+                disabled={loadingPlan !== null}
+                className={`mt-auto w-full rounded-full px-5 py-3 text-sm font-semibold transition-all duration-300 hover:scale-[1.03] disabled:cursor-wait disabled:opacity-60 ${
+                  plan.featured
+                    ? "bg-white text-black"
+                    : "bg-black text-white"
                 }`}
               >
-                Get started
+                {loadingPlan === plan.name
+                  ? "Preparing checkout..."
+                  : plan.name === "Free"
+                    ? `Test checkout · ${currency === "USD" ? "$1" : "₹1"}`
+                    : `Test checkout · ${getPrice(plan)}`}
               </button>
             </div>
           ))}
         </div>
 
-        {/* Divider */}
+        {message && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-6 break-words text-sm text-white/70"
+          >
+            {message}
+          </p>
+        )}
+
         <hr className="mt-28 border-0 border-t border-white/20" />
       </div>
     </section>
   );
 }
+
