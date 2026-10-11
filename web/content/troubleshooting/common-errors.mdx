@@ -1,10 +1,17 @@
+---
+title: Common Errors
+description: Troubleshoot ANAS CLI setup, provider, mode, and tool execution errors.
+---
+
 # Common Errors
 
-Use this guide to troubleshoot common ANAS CLI setup and runtime problems.
+Use this guide to troubleshoot common ANAS CLI setup and runtime problems. Start with the section that matches your error and follow the suggested steps.
 
 ## Missing API key
 
 The `doctor` command currently checks for `ANTHROPIC_API_KEY`.
+
+### Fix
 
 1. Open the `.env` file in the ANAS CLI project root.
 2. Add your Anthropic API key:
@@ -13,7 +20,7 @@ The `doctor` command currently checks for `ANTHROPIC_API_KEY`.
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
-3. Save the file and retry:
+3. Save the file and rerun the check:
 
 ```bash
 npm run dev -- doctor
@@ -21,54 +28,89 @@ npm run dev -- doctor
 
 The guided `wakeup` flow runs this environment check before provider selection.
 
+**Note:** The doctor check validates the Anthropic key specifically. It does not validate credentials for every supported provider.
+
 ## Unsupported mode
 
-If you see an error saying the mode is invalid, use one of:
+If you see an error indicating that the mode is invalid, use one of the supported values:
 
 - `agent`
 - `ask`
 - `plan`
 
-For example:
+For example, start an interactive chat in Ask mode:
 
 ```bash
 npm run dev -- chat --mode ask
 ```
 
+Check the spelling of the mode and make sure you're using the `--mode` option with the `chat` command.
+
 ## Provider or API errors
 
-Check the following:
+If a request fails or a provider returns an error, check the following:
 
-- The selected provider's API key is configured in `.env`.
-- The key is valid and has the necessary access.
+- The selected provider's API key is configured in the root `.env` file.
+- The key is valid and has the required access.
 - Your internet connection is working.
 - The provider's service is available.
+- The selected model is supported by your provider configuration.
 
-ANAS supports Claude, OpenAI, OpenRouter, and Gemini. The `doctor` command currently checks the Anthropic key specifically, so its result does not validate every provider.
+ANAS CLI supports Claude, OpenAI, OpenRouter, and Gemini.
+
+Remember that the `doctor` command checks the Anthropic API key specifically, so a successful check does not guarantee that another provider is configured correctly.
 
 ## Chat commands
 
-When an interactive chat session is running, type:
+Use the built-in help command while an interactive chat session is running:
 
 ```text
 /help
 ```
 
-to see available chat commands.
+The following commands are available in the current implementation:
 
-Use `/exit` to leave the session. Use `/new` to start a new session, and `/history` to view stored sessions. Use `/resume` to select a previous session.
+| Command | Purpose |
+| --- | --- |
+| `/help` | Display available chat commands. |
+| `/exit` | Leave the current session. |
+| `/new` | Start a new session. |
+| `/history` | View stored sessions. |
+| `/resume` | Select a previous session. |
 
 ## Tool operation blocked
 
-A tool operation may be blocked because:
+A tool operation may be blocked for several reasons:
 
-- You denied its permission prompt.
+- You denied the permission prompt.
 - A protected path requires authorization.
 - A terminal command was rejected by destructive-command guardrails.
 - The same operation failed three times.
 
-Review the requested operation and its path or command before trying again.
+### Fix
+
+1. Review the requested operation and the affected path or command.
+2. Check whether the operation requires permission or additional authorization.
+3. Correct the underlying issue before retrying.
+4. Review any changes before continuing.
+
+Do not bypass a safety check without understanding why the operation was blocked.
 
 ## Still stuck?
 
-Record the full error message, the command you ran, your selected provider, and the selected mode. Remove API keys and other secrets before sharing logs.
+When reporting a problem, include:
+
+- The complete error message.
+- The command you ran.
+- Your selected provider.
+- Your selected mode.
+- The relevant steps that reproduce the issue.
+
+**Protect your credentials:** Remove API keys, tokens, and other secrets before sharing logs or configuration files.
+
+## Related documentation
+
+- [Installation](/docs/getting-started/installation) — verify your setup.
+- [Quickstart](/docs/getting-started/quickstart) — run your first session.
+- [AI Providers](/docs/configuration/providers) — configure provider credentials.
+- [Tools & Permissions](/docs/reference/tools) — understand tool restrictions.

@@ -24,7 +24,7 @@ export default function Navbar() {
         </a>
 
         <a
-          href="#docs"
+          href="/docs"
           className="transition-all duration-300 hover:scale-110 hover:font-bold"
         >
           Docs

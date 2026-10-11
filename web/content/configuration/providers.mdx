@@ -1,46 +1,84 @@
+---
+title: AI Providers
+description: Configure Claude, OpenAI, OpenRouter, and Gemini for ANAS CLI.
+---
+
 # AI Providers
 
-ANAS CLI supports four AI providers.
+ANAS CLI supports four AI providers. Configure the API credentials for your preferred provider to start using its models.
 
 ## Supported providers
 
-| Provider   | Environment variable |
-| ---------- | -------------------- |
-| Claude     | `ANTHROPIC_API_KEY`  |
-| OpenAI     | `OPENAI_API_KEY`     |
+| Provider | Environment variable |
+| --- | --- |
+| Claude | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini     | `GEMINI_API_KEY`     |
+| Gemini | `GEMINI_API_KEY` |
 
-## Configure your API key
+## 1. Configure your API key
 
-Create a `.env` file in the ANAS CLI project root.
+Create a `.env` file in the root directory of your ANAS CLI project.
 
-Add the key for the provider you want to use:
+Add the environment variable for the provider you want to use:
 
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+For OpenAI:
+
+```bash
 OPENAI_API_KEY=your_openai_api_key
+```
+
+For OpenRouter:
+
+```bash
 OPENROUTER_API_KEY=your_openrouter_api_key
+```
+
+For Gemini:
+
+```bash
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-Replace each placeholder with your own key. You only need to configure the credentials for the provider you intend to use.
+Replace each placeholder with your actual API key. You only need to configure credentials for the provider you intend to use.
 
-Never commit API keys to version control or share them publicly.
+**Security reminder:** Never commit your `.env` file to version control or share your API keys publicly.
 
-## Selecting a provider
+## 2. Select a provider
 
-The guided `wakeup` command includes a provider-selection step.
+The guided startup experience includes a provider-selection step:
 
-The provider factory also supports these provider identifiers:
+```bash
+npm run dev -- wakeup
+```
+
+The provider factory supports these identifiers:
 
 - `claude`
 - `openai`
 - `openrouter`
 - `gemini`
 
-## Important implementation detail
+The identifier used internally may differ from the provider's display name.
 
-The current `doctor` command checks `ANTHROPIC_API_KEY` specifically. It may report that the environment is not ready even if you have configured a different provider's key.
+## 3. Troubleshoot API key issues
 
-Provider selection and API-key validation should be checked against the current CLI implementation when troubleshooting connection errors.
+The current `doctor` command checks `ANTHROPIC_API_KEY` specifically. It may report that the environment is not ready even when another provider's API key is configured.
+
+If you encounter a connection error:
+
+1. Verify that your `.env` file is in the project root.
+2. Check that the environment variable matches the selected provider.
+3. Confirm that the API key is valid and has the required access.
+4. Check the provider-specific error message.
+
+Provider selection and credential validation depend on the current CLI implementation.
+
+## What's next?
+
+- [Quickstart](/docs/getting-started/quickstart) — launch your first session.
+- [Modes](/docs/guides/modes) — explore Ask, Plan, and Agent modes.

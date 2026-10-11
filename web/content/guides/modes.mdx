@@ -1,6 +1,11 @@
+---
+title: Ask, Agent, and Plan Modes
+description: Learn how to select and use the three ANAS CLI interaction modes.
+---
+
 # Ask, Agent, and Plan Modes
 
-ANAS CLI exposes three modes: Ask, Agent, and Plan.
+ANAS CLI provides three interaction modes: **Ask**, **Agent**, and **Plan**. Each mode represents a different way to approach coding tasks.
 
 ## Select a mode
 
@@ -8,7 +13,13 @@ Use the `--mode` option when starting an interactive chat:
 
 ```bash
 npm run dev -- chat --mode ask
+```
+
+```bash
 npm run dev -- chat --mode agent
+```
+
+```bash
 npm run dev -- chat --mode plan
 ```
 
@@ -16,36 +27,47 @@ The default mode is `agent`.
 
 ## Ask mode
 
-Use Ask mode when you want to ask questions about code or discuss an implementation.
+Use Ask mode to explore your codebase, understand existing code, and discuss implementation ideas.
 
-Example prompts:
+**Example prompts**
 
 - Explain how this function works.
 - What does this error mean?
 - How could this module be simplified?
 
+Ask mode is best suited to investigation and understanding before making changes.
+
 ## Agent mode
 
-Use Agent mode when you want help carrying out a coding task.
+Use Agent mode when you want assistance carrying out a coding task.
 
-Example prompts:
+**Example prompts**
 
 - Help me implement input validation.
 - Find where this function is called.
 - Help me fix this failing test.
 
-Always review generated changes before relying on them.
+Review generated changes and command results before relying on them.
 
 ## Plan mode
 
-Use Plan mode when you want to work through an implementation approach before making changes.
+Use Plan mode to explore an implementation approach before proceeding with a coding task.
 
-Example prompts:
+**Example prompts**
 
 - Outline the steps to add authentication.
 - Identify which modules need to change for this feature.
 - Propose an approach for handling API errors.
 
-## Current implementation
+Planning helps you understand the scope of a change before committing to an implementation.
 
-These mode names are accepted by the CLI, but mode-specific behavior depends on the interactive chat implementation. The one-shot `talk` command currently sends the prompt directly to the selected provider and does not accept a mode option.
+## Implementation notes
+
+Mode names are accepted by the CLI, but their specific behavior depends on the interactive chat implementation.
+
+The one-shot `talk` command sends a prompt directly to the selected provider and does not currently accept a `--mode` option.
+
+## What's next?
+
+- [Quickstart](/docs/getting-started/quickstart) — launch an interactive session.
+- [AI Providers](/docs/configuration/providers) — configure your preferred provider.

@@ -1,20 +1,29 @@
+---
+title: Installation
+description: Install, configure, and run ANAS CLI from source.
+---
+
 # Installation
 
-ANAS CLI is currently run from its source code.
+ANAS CLI currently runs from source code. Follow these steps to install dependencies, configure your environment, and launch the CLI.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) installed
-- npm installed
-- The ANAS CLI repository cloned to your machine
+Before you begin, make sure you have:
+
+- [Node.js](https://nodejs.org/) installed.
+- npm installed.
+- The ANAS CLI repository cloned to your machine.
 
 ## 1. Open the project
 
-Open a terminal in the ANAS CLI project directory.
+Open your terminal in the root directory of the ANAS CLI repository.
+
+All commands below should run from this directory, where the root `package.json` is located.
 
 ## 2. Install dependencies
 
-Run:
+Install the project dependencies:
 
 ```bash
 npm install
@@ -22,32 +31,39 @@ npm install
 
 ## 3. Configure environment variables
 
-ANAS CLI uses a root-level `.env` file. Configure the provider credentials required by your setup before using AI features.
+ANAS CLI uses a root-level `.env` file for environment configuration.
 
-Keep your API keys private. Never commit your `.env` file to Git.
+Add the provider credentials required for your setup before using AI features.
 
-## 4. Start ANAS CLI
+**Keep your API keys private.** Never commit your `.env` file to Git or share your credentials publicly.
 
-Run the development command:
+## 4. Start in development mode
+
+Run the CLI directly from its TypeScript source:
 
 ```bash
 npm run dev
 ```
 
-This executes `src/index.ts` through `tsx`.
+This command executes `src/index.ts` using `tsx`, so you can run the CLI without compiling it first.
 
-## 5. Build the project
+## 5. Build for production
 
-To compile the TypeScript project, run:
+Compile the TypeScript project:
 
 ```bash
 npm run build
 ```
 
-The production start command is:
+After a successful build, start the compiled application:
 
 ```bash
 npm start
 ```
 
-Run the production command after building successfully.
+The production command runs `dist/index.js`. Make sure your TypeScript configuration emits the entry point to that location before using it.
+
+## What's next?
+
+- [Quickstart](/docs/getting-started/quickstart) — learn how to start using ANAS CLI.
+- [Provider Configuration](/docs/configuration/providers) — configure your AI provider.

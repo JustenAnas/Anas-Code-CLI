@@ -1,62 +1,92 @@
+---
+title: Tools & Permissions
+description: Learn which tools ANAS CLI can use, how mode restrictions work, and when permissions are required.
+---
+
 # Tools & Permissions
 
-ANAS CLI uses tools to inspect project files, make changes, run commands, and inspect Git state.
+ANAS CLI uses tools to inspect project files, make changes, execute terminal commands, and inspect Git state. Tool availability depends on the selected mode and the current implementation.
 
 ## Available tools
 
-| Tool          | Purpose                                              |
-| ------------- | ---------------------------------------------------- |
-| `read_file`   | Read a file                                          |
-| `write_file`  | Create or overwrite a file                           |
-| `edit_file`   | Replace exact text in a file                         |
-| `bash`        | Run a terminal command                               |
-| `glob`        | Find files using a glob pattern                      |
-| `list_dir`    | List a directory                                     |
-| `search_code` | Search project file contents                         |
-| `git`         | Inspect repository status, diffs, logs, and branches |
+| Tool | Purpose |
+| --- | --- |
+| `read_file` | Read a file. |
+| `write_file` | Create or overwrite a file. |
+| `edit_file` | Replace exact text in a file. |
+| `bash` | Run a terminal command. |
+| `glob` | Find files using a glob pattern. |
+| `list_dir` | List directory contents. |
+| `search_code` | Search project file contents. |
+| `git` | Inspect repository status, diffs, logs, and branches. |
 
 ## Tool access by mode
 
 ### Ask mode
 
-Ask mode allows read-only inspection tools:
+Ask mode is restricted to read-only inspection tools.
+
+**Available tools:**
 
 - `read_file`
 - `search_code`
 - `glob`
 - `list_dir`
 
-It does not allow file-writing, editing, terminal, or Git tools through the mode's tool allowlist.
+File-writing, editing, terminal, and Git tools are not available through Ask mode's tool allowlist.
 
 ### Agent mode
 
 Agent mode can access all eight registered tools, subject to permission checks and guardrails.
 
+This enables the agent to inspect files, make code changes, run commands, and inspect repository state when permitted.
+
 ### Plan mode
 
-Plan mode currently has no tools enabled. It cannot use the registered tools through the current tool allowlist.
+Plan mode currently has no tools enabled through its tool allowlist.
+
+It cannot invoke the registered tools through the current implementation.
 
 ## Permission prompts
 
-ANAS requests confirmation before running these tools:
+ANAS requests confirmation before executing these operations:
 
-- `bash`
-- `write_file`
-- `edit_file`
+| Tool | Why confirmation is required |
+| --- | --- |
+| `bash` | A terminal command will be executed. |
+| `write_file` | A file may be created or overwritten. |
+| `edit_file` | Existing file contents may be changed. |
 
-The prompt displays the operation details and asks whether to allow it. If permission is denied, that exact operation is blocked from being retried.
+The permission prompt displays the operation details and asks whether to allow it.
+
+If permission is denied, that exact operation is blocked from being retried.
 
 ## Guardrails
 
-Before execution, ANAS checks file-writing and editing operations against protected-path rules. Certain restricted changes require explicit authorization in the user's prompt.
+ANAS applies additional checks before executing operations.
+
+### Protected paths
+
+File-writing and editing operations are checked against protected-path rules. Certain restricted changes require explicit authorization in the user's prompt.
+
+### Destructive commands
 
 Terminal commands are checked against destructive-command guardrails before execution.
 
-ANAS also stops retrying an identical operation after three failures.
+### Repeated failures
 
-## Important notes
+ANAS stops retrying an identical operation after three failures.
 
-- Permission prompts are not a replacement for reviewing commands and file changes.
+## Safe usage practices
+
+- Review permission prompts before approving operations.
 - Read tool output carefully before using it to make decisions.
-- Review changes before committing or deploying your project.
-- Tool availability depends on the selected mode and the current implementation.
+- Inspect file changes before committing or deploying your project.
+- Verify terminal commands before allowing execution.
+- Remember that tool access depends on the selected mode and current implementation.
+
+## Related documentation
+
+- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+- [CLI Commands](/docs/reference/commands) — explore available commands.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

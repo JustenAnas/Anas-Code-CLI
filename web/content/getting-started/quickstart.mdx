@@ -1,16 +1,21 @@
+---
+title: Quickstart
+description: Start your first ANAS CLI session and explore its core commands.
+---
+
 # Quickstart
 
-Get your first ANAS CLI session running.
+Get your first ANAS CLI session running. You can launch the guided setup, start a chat directly, choose an operating mode, or send a one-shot prompt.
 
 ## 1. Check your setup
 
-Run:
+Run the doctor command to check your environment:
 
 ```bash
 npm run dev -- doctor
 ```
 
-The doctor command checks your Node.js version and required Anthropic API key.
+The doctor command checks your Node.js version and the required Anthropic API key.
 
 ## 2. Start the guided experience
 
@@ -22,44 +27,82 @@ npm run dev -- wakeup
 
 The guided startup displays the banner, checks prerequisites, and lets you select a provider and mode before chatting.
 
-## 3. Start a chat directly
+## 3. Start a chat
 
-To launch an interactive session in Agent mode:
+Launch an interactive session in the default mode:
 
 ```bash
 npm run dev -- chat
 ```
 
-Choose a mode explicitly:
+You can also choose a mode explicitly.
+
+### Ask mode
+
+Ask questions and explore your codebase.
 
 ```bash
 npm run dev -- chat --mode ask
+```
+
+### Plan mode
+
+Plan an approach before making changes.
+
+```bash
 npm run dev -- chat --mode plan
+```
+
+### Agent mode
+
+Work interactively with the coding agent.
+
+```bash
 npm run dev -- chat --mode agent
 ```
 
 ## 4. Send a one-shot prompt
 
-Use `talk` to send a single prompt:
+Use `talk` to submit a single prompt:
 
 ```bash
 npm run dev -- talk "Explain the structure of this project"
 ```
 
+This is useful when you want a direct response without starting an interactive chat session.
+
 ## 5. Show token usage and cost
 
-Add `--verbose` to supported commands:
+Add `--verbose` to supported commands to display additional usage information:
 
 ```bash
 npm run dev -- chat --verbose
+```
+
+```bash
 npm run dev -- wakeup --verbose
+```
+
+```bash
 npm run dev -- talk "Explain this function" --verbose
 ```
 
 ## More commands
 
-- `banner` displays the welcome banner.
-- `hello` prints a greeting.
-- `doctor` checks whether the environment is ready.
+| Command | Description |
+| --- | --- |
+| `banner` | Displays the welcome banner. |
+| `hello` | Prints a greeting. |
+| `doctor` | Checks whether the environment is ready. |
 
-Use `npm run dev -- --help` to display the available CLI commands.
+To see the available CLI commands and options, run:
+
+```bash
+npm run dev -- --help
+```
+
+## What's next?
+
+
+- [Provider Configuration](/docs/configuration/providers) — configure your AI provider.
+- [Modes](/docs/guides/modes) — understand Ask, Plan, and Agent modes.
