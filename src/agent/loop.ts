@@ -1,8 +1,7 @@
-
 import {
-  ProviderError,
-  type BaseProvider,
-  type Message,
+ProviderError,
+type BaseProvider,
+type Message,
 } from "../providers/base.js";
 import { fmt } from "../ui/format.js";
 import { executeTool } from "./tool-executor.js";
@@ -31,8 +30,8 @@ IMPORTANT: The bash tool runs on Windows CMD, not Linux or Unix.
 
 * Use Windows CMD-compatible commands only.
 * Do not use Unix/Linux flags such as "mkdir -p".
-* For creating directories, use "mkdir folder\\subfolder".
-* For paths in bash commands, use Windows-compatible paths such as "agent-test\\test-folder".
+* For creating directories, use "mkdir folder\subfolder".
+* For paths in bash commands, use Windows-compatible paths such as "agent-test\test-folder".
 * Do not use "./" paths inside bash commands.
 
 When you need tools, use the provided tools directly.
@@ -57,7 +56,7 @@ PATH RULES:
 * If the user provides a path, pass that path directly to the appropriate file tool.
 * Do not refuse a path merely because it is absolute.
 * Do not decide whether an absolute path is inside or outside the workspace yourself.
-* The file tools enforce the ANAS workspace boundary and will reject paths outside it.
+* The file tools enforce the ANAS workspace boundary and will reject paths outside the workspace.
 * If a file tool rejects a path because it is outside the workspace, report that result honestly to the user.
 * Never invent or substitute a different path when the provided path is rejected.
 
@@ -96,7 +95,7 @@ VERIFICATION RULE:
 
 IMPORTANT TOOL RULE:
 
-* Use search_code when you need to find text, symbols, functions, classes, variables, imports, or other content inside files.
+* Use search_code when you need to find text, symbols, functions, classes, variables, or other content inside files.
 * Use glob only when you need to find files by filename or pattern.
 * Do not use bash/findstr/grep to search file contents when search_code can do it.
 
@@ -108,304 +107,264 @@ If read_file says a file does not exist and the user only asked to read it, repo
 `;
 
 function trimHistory(history: Message[], maxMessages: number = 20): Message[] {
-  if (history.length <= maxMessages) return history;
+if (history.length <= maxMessages) return history;
 
-  const first = history[0];
-  let trimmed = history.slice(1);
+const first = history[0];
+let trimmed = history.slice(1);
 
-  while (trimmed.length > maxMessages - 1) {
-    const current = trimmed[0];
+while (trimmed.length > maxMessages - 1) {
+const current = trimmed[0];
 
-    if (current?.role === "assistant") {
-      const toolCalls =
-        current.toolCalls ?? (current.toolCall ? [current.toolCall] : []);
+if (current?.role === "assistant") {
+  const toolCalls =
+    current.toolCalls ?? (current.toolCall ? [current.toolCall] : []);
 
-      if (toolCalls.length > 0) {
-        let resultCount = 0;
+  if (toolCalls.length > 0) {
+    let resultCount = 0;
 
-        while (
-          resultCount < toolCalls.length &&
-          trimmed[resultCount + 1]?.role === "tool"
-        ) {
-          resultCount++;
-        }
-
-        // Keep each assistant tool-call message together with its results.
-        trimmed = trimmed.slice(1 + resultCount);
-        continue;
-      }
+    while (
+      resultCount < toolCalls.length &&
+      trimmed[resultCount + 1]?.role === "tool"
+    ) {
+      resultCount++;
     }
 
-    trimmed = trimmed.slice(1);
+    // Keep each assistant tool-call message together with its results.
+    trimmed = trimmed.slice(1 + resultCount);
+    continue;
   }
+}
 
-  return [first, ...trimmed];
+trimmed = trimmed.slice(1);
+
+
+}
+
+return [first, ...trimmed];
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+if (
+typeof error === "object" &&
+error !== null &&
+"status" in error &&
+typeof error.status === "number"
+) {
+return error.status;
+}
+
+return undefined;
+}
+
+function isInsufficientCreditsError(error: unknown): boolean {
+const message = error instanceof Error ? error.message : String(error);
+const status =
+error instanceof ProviderError ? error.status : getErrorStatus(error);
+
+return (
+status === 402 ||
+/requires more credits|insufficient credits|more credits.*fewer max_tokens/i.test(
+message,
+)
+);
+}
+
+function createInsufficientCreditsError(): ProviderError {
+return new ProviderError(
+"Your OpenRouter credits are insufficient for this model. Add credits to continue, or select a free model.\nAdd credits: https://openrouter.ai/settings/credits",
+402,
+false,
+);
 }
 
 async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  onRetry?: (attempt: number, error: string) => void,
+fn: () => Promise<T>,
+maxRetries: number = 3,
+onRetry?: (attempt: number, error: string) => void,
 ): Promise<T> {
-  let lastError: Error = new Error("Unknown error");
+let lastError: Error = new Error("Unknown error");
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+for (let attempt = 1; attempt <= maxRetries; attempt++) {
+try {
+return await fn();
+} catch (error) {
+if (isInsufficientCreditsError(error)) {
+throw createInsufficientCreditsError();
+}
 
-      if (error instanceof ProviderError) {
-        if (!error.retryable) {
-          throw error;
-        }
 
-        if (error.status === 500 && attempt >= 2) {
-          throw error;
-        }
-      }
+  lastError = error instanceof Error ? error : new Error(String(error));
 
-      if (attempt >= maxRetries) {
-        throw error;
-      }
+  if (error instanceof ProviderError) {
+    if (!error.retryable) {
+      throw error;
+    }
 
-      const waitMs = Math.pow(2, attempt - 1) * 1000;
-
-      onRetry?.(attempt, lastError.message);
-
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    if (error.status === 500 && attempt >= 2) {
+      throw error;
     }
   }
 
-  throw lastError;
+  if (attempt >= maxRetries) {
+    throw error;
+  }
+
+  const waitMs = Math.pow(2, attempt - 1) * 1000;
+
+  onRetry?.(attempt, lastError.message);
+
+  await new Promise((resolve) => setTimeout(resolve, waitMs));
+}
+
+
+}
+
+throw lastError;
 }
 
 export async function runAgentLoop(
-  prompt: string,
-  provider: BaseProvider,
-  session: Session,
-  onChunk: (chunk: string) => void,
-  onStatus?: (status: string) => void,
-  context: string = "",
-  verbose: boolean = false,
-  mode: CliMode = "agent",
-  permissionHandler?: (
-    toolName: string,
-    input: Record<string, string>,
-  ) => Promise<PermissionResult>,
-  onUsage?: (inputTokens: number, outputTokens: number, cost: number) => void,
+prompt: string,
+provider: BaseProvider,
+session: Session,
+onChunk: (chunk: string) => void,
+onStatus?: (status: string) => void,
+context: string = "",
+verbose: boolean = false,
+mode: CliMode = "agent",
+permissionHandler?: (
+toolName: string,
+input: Record<string, string>,
+) => Promise<PermissionResult>,
+onUsage?: (inputTokens: number, outputTokens: number, cost: number) => void,
 ): Promise<Plan | null> {
-  const history = session.messages;
+const history = session.messages;
 
-  const guardrail = inputGuardrail(prompt);
+const guardrail = inputGuardrail(prompt);
 
-  if (!guardrail.allowed) {
-    onStatus?.(`[Guardrail Blocked] ${guardrail.reason}`);
-    return null;
+if (!guardrail.allowed) {
+onStatus?.(`[Guardrail Blocked] ${guardrail.reason}`);
+return null;
+}
+
+if (guardrail.warning) {
+onStatus?.(`[Guardrail Warning] ${guardrail.warning}`);
+}
+
+history.push({ role: "user", content: prompt });
+
+const MAX_ITERATIONS = 200;
+let iterations = 0;
+
+const deniedToolCalls = new Set<string>();
+const failedToolCalls = new Map<string, number>();
+
+while (iterations < MAX_ITERATIONS) {
+iterations++;
+
+
+let response;
+
+const memory =
+  session.memory.items.length > 0
+    ? `\n\nMemory:\n${session.memory.items.join("\n")}`
+    : "";
+
+try {
+  const fullSystemPrompt =
+    mode === "plan"
+      ? `${SYSTEM_PROMPT}\n\nYou are in PLAN mode. Do NOT use any tools. Do NOT write or modify code.\n\nCreate a concise implementation plan for the user's task.\nReturn ONLY valid JSON in this exact format:\n{"steps":["step 1","step 2","step 3"]}\n\nRules:\n- Each step must be a clear action.\n- Keep the plan to 3-10 steps.\n- Do not include markdown or code fences.\n- Do not execute the plan.`
+      : mode === "ask"
+        ? `${SYSTEM_PROMPT}\n\nYou are in ASK mode. You can only read and inspect files, not create or modify them. Use only read_file, search_code, glob, and list_dir.`
+        : SYSTEM_PROMPT;
+
+  const finalSystemPrompt = `${fullSystemPrompt}${memory}`;
+
+  if (shouldCompact(history)) {
+    const compactedHistory = await compactHistory(history, provider);
+    history.splice(0, history.length, ...compactedHistory);
   }
 
-  if (guardrail.warning) {
-    onStatus?.(`[Guardrail Warning] ${guardrail.warning}`);
+  const trimmedHistory = trimHistory(history);
+
+  response = await withRetry(
+    () =>
+      provider.streamMessage(trimmedHistory, onChunk, finalSystemPrompt),
+    3,
+    (attempt, error) => {
+      onStatus?.(`[Retry ${attempt}/3] ${error} — retrying...`);
+    },
+  );
+
+  if (response.inputTokens) {
+    const inputCost = (response.inputTokens * 2.5) / 1_000_000;
+    const outputCost = ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
+    const totalCost = inputCost + outputCost;
+
+    onUsage?.(response.inputTokens, response.outputTokens ?? 0, totalCost);
+  }
+} catch (error) {
+  if (isInsufficientCreditsError(error)) {
+    onStatus?.(`[Insufficient OpenRouter Credits]\n${createInsufficientCreditsError().message}`);
+    break;
   }
 
-  history.push({ role: "user", content: prompt });
+  const message = error instanceof Error ? error.message : String(error);
 
-  const MAX_ITERATIONS = 200;
-  let iterations = 0;
+  if (
+    message.includes("Invalid OpenAI API key") ||
+    message.includes("insufficient credits") ||
+    message.includes("rate limit")
+  ) {
+    onStatus?.(`[API Error] ${message}`);
+    break;
+  }
 
-  const deniedToolCalls = new Set<string>();
-  const failedToolCalls = new Map<string, number>();
+  onStatus?.(`[Error] ${message}`);
 
-  while (iterations < MAX_ITERATIONS) {
-    iterations++;
+  history.push({
+    role: "user",
+    content: `There was an error: ${message}. Please try again.`,
+  });
 
-    let response;
+  break;
+}
 
-    const memory =
-      session.memory.items.length > 0
-        ? `\n\nMemory:\n${session.memory.items.join("\n")}`
-        : "";
+// Support multiple native tool calls while retaining compatibility
+// with providers that return only the original single toolCall field.
+const toolCalls =
+  response.toolCalls ??
+  (response.toolCall ? [response.toolCall] : []);
 
-    try {
-      const fullSystemPrompt =
-        mode === "plan"
-          ? `${SYSTEM_PROMPT}\n\nYou are in PLAN mode. Do NOT use any tools. Do NOT write or modify code.\n\nCreate a concise implementation plan for the user's task.\nReturn ONLY valid JSON in this exact format:\n{"steps":["step 1","step 2","step 3"]}\n\nRules:\n- Each step must be a clear action.\n- Keep the plan to 3-10 steps.\n- Do not include markdown or code fences.\n- Do not execute the plan.`
-          : mode === "ask"
-            ? `${SYSTEM_PROMPT}\n\nYou are in ASK mode. You can only read and inspect files, not create or modify them. Use only read_file, search_code, glob, and list_dir.`
-            : SYSTEM_PROMPT;
+if (toolCalls.length > 0) {
+  const allowedTools = getAllowedTools(mode);
 
-      const finalSystemPrompt = `${fullSystemPrompt}${memory}`;
+  // Record all calls together before adding their individual results.
+  history.push({
+    role: "assistant",
+    content: response.content,
+    toolCalls,
+  });
 
-      if (shouldCompact(history)) {
-        const compactedHistory = await compactHistory(history, provider);
-        history.splice(0, history.length, ...compactedHistory);
-      }
-
-      const trimmedHistory = trimHistory(history);
-
-      response = await withRetry(
-        () =>
-          provider.streamMessage(trimmedHistory, onChunk, finalSystemPrompt),
-        3,
-        (attempt, error) => {
-          onStatus?.(`[Retry ${attempt}/3] ${error} — retrying...`);
-        },
-      );
-
-      if (response.inputTokens) {
-        const inputCost = (response.inputTokens * 2.5) / 1_000_000;
-        const outputCost = ((response.outputTokens ?? 0) * 10.0) / 1_000_000;
-        const totalCost = inputCost + outputCost;
-
-        onUsage?.(response.inputTokens, response.outputTokens ?? 0, totalCost);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      if (
-        message.includes("Invalid OpenAI API key") ||
-        message.includes("insufficient credits") ||
-        message.includes("rate limit")
-      ) {
-        onStatus?.(`[API Error] ${message}`);
-        break;
-      }
-
-      onStatus?.(`[Error] ${message}`);
-
-      history.push({
-        role: "user",
-        content: `There was an error: ${message}. Please try again.`,
-      });
-
-      break;
-    }
-
-    // Support multiple native tool calls while retaining compatibility
-    // with providers that return only the original single toolCall field.
-    const toolCalls =
-      response.toolCalls ??
-      (response.toolCall ? [response.toolCall] : []);
-
-       
-
-    if (toolCalls.length > 0) {
-      const allowedTools = getAllowedTools(mode);
-
-      // Record all calls together before adding their individual results.
-      history.push({
-        role: "assistant",
-        content: response.content,
-        toolCalls,
-      });
-
-      // Execute sequentially to avoid concurrent file changes and preserve
-      // the existing permission and guardrail behavior.
-      for (const toolCall of toolCalls) {
-        if (!allowedTools.includes(toolCall.name)) {
-          const message = `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
-            allowedTools.join(", ") || "none"
-          }.`;
-
-          onStatus?.(`[Blocked: ${toolCall.name} not allowed in ${mode} mode]`);
-
-          history.push({
-            role: "tool",
-            content: message,
-            toolCallId: toolCall.id,
-          });
-
-          continue;
-        }
-
-        onStatus?.(`[Using tool: ${toolCall.name}]`);
-
-        try {
-          const toolResult = await executeTool(
-            toolCall.name,
-            toolCall.input,
-            prompt,
-            deniedToolCalls,
-            failedToolCalls,
-            permissionHandler,
-          );
-
-          onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
-
-          history.push({
-            role: "tool",
-            content: `[UNTRUSTED TOOL RESULT]\n${toolResult}\n[END UNTRUSTED TOOL RESULT]`,
-            toolCallId: toolCall.id,
-          });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-
-          onStatus?.(`[Tool Error] → ${errorMessage}`);
-
-          history.push({
-            role: "tool",
-            content: `Tool error: ${errorMessage}`,
-            toolCallId: toolCall.id,
-          });
-        }
-      }
-
-      continue;
-    }
-
-    // Legacy text-based tool-call fallback.
-    const toolCall = parseToolCall(response.content);
-
-    if (toolCall?.invalid) {
-      history.push({
-        role: "user",
-        content:
-          "Your response contained multiple text-based tool calls. Use the provided native tools instead. Do not provide tool results yourself; wait for actual tool results before continuing.",
-      });
-
-      continue;
-    }
-
-    if (!toolCall) {
-      history.push({
-        role: "assistant",
-        content: response.content,
-      });
-
-      if (mode === "plan") {
-        return parsePlan(response.content);
-      }
-
-      session.memory = await updateMemory(session.memory, history, provider);
-
-      break;
-    }
-
-    const allowedTools = getAllowedTools(mode);
-
+  // Execute sequentially to avoid concurrent file changes and preserve
+  // the existing permission and guardrail behavior.
+  for (const toolCall of toolCalls) {
     if (!allowedTools.includes(toolCall.name)) {
-      history.push({
-        role: "assistant",
-        content: `<tool_call>${JSON.stringify(toolCall)}</tool_call>`,
-      });
+      const message = `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
+        allowedTools.join(", ") || "none"
+      }.`;
+
+      onStatus?.(`[Blocked: ${toolCall.name} not allowed in ${mode} mode]`);
 
       history.push({
-        role: "user",
-        content: `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
-          allowedTools.join(", ") || "none"
-        }.`,
+        role: "tool",
+        content: message,
+        toolCallId: toolCall.id,
       });
 
       continue;
     }
 
     onStatus?.(`[Using tool: ${toolCall.name}]`);
-
-    history.push({
-      role: "assistant",
-      content: `<tool_call>${JSON.stringify(toolCall)}</tool_call>`,
-    });
 
     try {
       const toolResult = await executeTool(
@@ -417,23 +376,12 @@ export async function runAgentLoop(
         permissionHandler,
       );
 
-      if (toolResult.startsWith("Error ")) {
-        history.push({
-          role: "user",
-          content: `Tool error: ${toolResult}
-
-Do NOT repeat the exact same tool call.
-Analyze the error, determine what was wrong, and try a corrected tool call if possible.`,
-        });
-
-        continue;
-      }
-
       onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
 
       history.push({
-        role: "user",
+        role: "tool",
         content: `[UNTRUSTED TOOL RESULT]\n${toolResult}\n[END UNTRUSTED TOOL RESULT]`,
+        toolCallId: toolCall.id,
       });
     } catch (error) {
       const errorMessage =
@@ -442,11 +390,114 @@ Analyze the error, determine what was wrong, and try a corrected tool call if po
       onStatus?.(`[Tool Error] → ${errorMessage}`);
 
       history.push({
-        role: "user",
-        content: `Tool error: ${errorMessage}. Please try again.`,
+        role: "tool",
+        content: `Tool error: ${errorMessage}`,
+        toolCallId: toolCall.id,
       });
     }
   }
 
-  return null;
+  continue;
+}
+
+// Legacy text-based tool-call fallback.
+const toolCall = parseToolCall(response.content);
+
+if (toolCall?.invalid) {
+  history.push({
+    role: "user",
+    content:
+      "Your response contained multiple text-based tool calls. Use the provided native tools instead. Do not provide tool results yourself; wait for actual tool results before continuing.",
+  });
+
+  continue;
+}
+
+if (!toolCall) {
+  history.push({
+    role: "assistant",
+    content: response.content,
+  });
+
+  if (mode === "plan") {
+    return parsePlan(response.content);
+  }
+
+  session.memory = await updateMemory(session.memory, history, provider);
+
+  break;
+}
+
+const allowedTools = getAllowedTools(mode);
+
+if (!allowedTools.includes(toolCall.name)) {
+  history.push({
+    role: "assistant",
+    content: `<tool_call>${JSON.stringify(toolCall)}</tool_call>`,
+  });
+
+  history.push({
+    role: "user",
+    content: `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
+      allowedTools.join(", ") || "none"
+    }.`,
+  });
+
+  continue;
+}
+
+onStatus?.(`[Using tool: ${toolCall.name}]`);
+
+history.push({
+  role: "assistant",
+  content: `<tool_call>${JSON.stringify(toolCall)}</tool_call>`,
+});
+
+try {
+  const toolResult = await executeTool(
+    toolCall.name,
+    toolCall.input,
+    prompt,
+    deniedToolCalls,
+    failedToolCalls,
+    permissionHandler,
+  );
+
+  if (toolResult.startsWith("Error ")) {
+    history.push({
+      role: "user",
+      content: `Tool error: ${toolResult}
+
+
+Do NOT repeat the exact same tool call.
+Analyze the error, determine what was wrong, and try a corrected tool call if possible.`,
+});
+
+
+
+    continue;
+  }
+
+  onStatus?.(`[Tool: ${toolCall.name}] → ${toolResult}`);
+
+  history.push({
+    role: "user",
+    content: `[UNTRUSTED TOOL RESULT]\n${toolResult}\n[END UNTRUSTED TOOL RESULT]`,
+  });
+} catch (error) {
+  const errorMessage =
+    error instanceof Error ? error.message : String(error);
+
+  onStatus?.(`[Tool Error] → ${errorMessage}`);
+
+  history.push({
+    role: "user",
+    content: `Tool error: ${errorMessage}. Please try again.`,
+  });
+}
+
+
+}
+
+return null;
 }

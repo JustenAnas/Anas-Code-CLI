@@ -1,6 +1,6 @@
+
 import { Command } from "commander";
 import { printBanner } from "./ui/banner.js";
-import { requireApiKey } from "./config/env.js";
 import chalk from "chalk";
 import { runQuery } from "./agent/run-query.js";
 import { CliMode, parseCliMode } from "./agent/modes.js";
@@ -54,19 +54,37 @@ export function createCli() {
 
   program
     .command("doctor")
-    .description("Check environment is ready")
+    .description("Check Node.js and configured API keys")
     .action(async () => {
       const { execa } = await import("execa");
       const { stdout } = await execa("node", ["-v"]);
-      if (Number(stdout.slice(1)) < 18) {
+
+      const major = parseInt(
+        stdout.trim().replace(/^v/, "").split(".")[0] ?? "0",
+        10,
+      );
+
+      if (major < 18) {
         throw new Error("Node.js version 18 or higher is required");
       }
-      const apiKey = requireApiKey();
-      if (!apiKey) {
-        throw new Error("ANTHROPIC_API_KEY is not set");
+
+      console.log(chalk.green("✓ Node.js is >= 18"));
+
+      const providers = [
+        ["Anthropic", "ANTHROPIC_API_KEY"],
+        ["OpenAI", "OPENAI_API_KEY"],
+        ["OpenRouter", "OPENROUTER_API_KEY"],
+        ["Gemini", "GEMINI_API_KEY"],
+        ["Groq", "GROQ_API_KEY"],
+      ] as const;
+
+      for (const [name, envName] of providers) {
+        if (process.env[envName]) {
+          console.log(chalk.green(`✓ ${name} API key is set`));
+        } else {
+          console.log(chalk.gray(`- ${name} API key is not set`));
+        }
       }
-      console.log(chalk.green("✅ Node.js is >= 18"));
-      console.log(chalk.green("✅ Anthropic API key is set"));
     });
 
   program

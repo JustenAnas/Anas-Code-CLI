@@ -1,19 +1,33 @@
+
 import chalk from "chalk";
 import "dotenv/config";
 import { execa } from "execa";
+import type { ProviderName } from "../providers/factory.js";
 
-export function requireApiKey(): string {
-  const key = process.env.ANTHROPIC_API_KEY;
+const PROVIDER_API_KEYS: Record<ProviderName, string> = {
+  claude: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
+  gemini: "GEMINI_API_KEY",
+  groq: "GROQ_API_KEY",
+};
+
+export function requireApiKey(provider: ProviderName): string {
+  const envName = PROVIDER_API_KEYS[provider];
+  const key = process.env[envName];
+
   if (!key) {
     throw new Error(
-      "Missing ANTHROPIC_API_KEY. Copy .env.example to .env and add your key.",
+      `Missing ${envName}. Add your key to your .env file to use ${provider}.`,
     );
   }
+
   return key;
 }
 
 export async function checkEnvironment(): Promise<void> {
   const { stdout } = await execa("node", ["-v"]);
+
   const major = parseInt(
     stdout.trim().replace(/^v/, "").split(".")[0] ?? "0",
     10,
@@ -24,5 +38,4 @@ export async function checkEnvironment(): Promise<void> {
   }
 
   console.log(chalk.green("✓ Node.js is >= 18"));
-  console.log(chalk.green("✓ API key connected"));
 }

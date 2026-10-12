@@ -2,7 +2,6 @@ import { input, confirm, select } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
 import { createProvider, type ProviderName } from "../providers/factory.js";
-// import type { Message } from "../providers/base.js";
 import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
@@ -15,6 +14,7 @@ export type ChatOptions = {
   mode?: CliMode;
   verbose?: boolean;
   provider?: ProviderName;
+  model?: string;
 };
 
 function printPlan(plan: Plan): void {
@@ -33,9 +33,10 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
     mode = "agent",
     verbose = false,
     provider: providerName = "openrouter",
+    model,
   } = options;
 
-  const provider = createProvider(providerName);
+  const provider = createProvider(providerName, model);
   const context = await buildProjectContext();
 
   const sessionStore = new SessionStore();
@@ -49,7 +50,10 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   }
 
   console.log(
-    fmt.mode(`Chat started · provider: ${provider.name} · mode: ${mode}`),
+    fmt.mode(
+      `Chat started · provider: ${provider.name} · mode: ${mode}` +
+        (model ? ` · model: ${model}` : ""),
+    ),
   );
   console.log(fmt.dim("Type /help for commands, /exit to quit.\n"));
 
@@ -58,10 +62,10 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   while (running) {
     const line = await input({ message: fmt.label("You:") });
     const trimmed = line.trim();
-    const enrichedPrompt = await resolveFileReferences(trimmed);
 
     if (!trimmed) continue;
 
+    const enrichedPrompt = await resolveFileReferences(trimmed);
     const command = handleCommand(trimmed, mode);
 
     if (command.type === "exit") {
@@ -138,8 +142,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       continue;
     }
 
-    // startSpinner("Thinking…");
-
     try {
       let firstChunk = true;
 
@@ -151,20 +153,17 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           if (mode === "plan") return;
 
           if (firstChunk) {
-            // stopSpinner();
             process.stdout.write(fmt.assistant("Assistant: "));
             firstChunk = false;
           }
 
           process.stdout.write(chunk);
         },
-         (status) => console.log(`\n[DEBUG] ${status}`),
+        (status) => console.log(`\n[DEBUG] ${status}`),
         "",
         verbose,
         mode,
       );
-
-      // stopSpinner();
 
       if (mode === "plan" && plan) {
         printPlan(plan);
@@ -182,8 +181,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
 ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
-          // startSpinner("Executing…");
-
           let executionFirstChunk = true;
 
           await runAgentLoop(
@@ -192,28 +189,24 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
             session,
             (chunk) => {
               if (executionFirstChunk) {
-                // stopSpinner();
                 process.stdout.write(fmt.assistant("Assistant: "));
                 executionFirstChunk = false;
               }
 
               process.stdout.write(chunk);
             },
-             (status) => console.log(`\n[DEBUG] ${status}`),
-        "",
-        verbose,
-        mode,
+            (status) => console.log(`\n[DEBUG] ${status}`),
+            "",
+            verbose,
+            mode,
           );
 
-          // stopSpinner();
           console.log();
         }
       }
 
       console.log();
     } catch (error) {
-      // stopSpinner();
-
       console.error(
         fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
       );
@@ -222,3 +215,4 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
   console.log(fmt.dim("Session ended."));
 }
+

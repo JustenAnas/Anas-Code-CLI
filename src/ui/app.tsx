@@ -1,5 +1,5 @@
 import "dotenv/config";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { render, Box, Text, useInput } from "ink";
 import { Header } from "./Header.js";
 import { Chat } from "./Chat.js";
@@ -11,6 +11,10 @@ import type { PermissionResult } from "../agent/permission.js";
 import { handleCommand } from "../commands/handler.js";
 import type { CliMode } from "../agent/modes.js";
 import { createSession, addMessage } from "../agent/session.js";
+import {
+  fetchOpenRouterModels,
+  type OpenRouterModel,
+} from "../providers/openrouter.js";
 
 type PermissionRequest = {
   toolName: string;
@@ -18,17 +22,26 @@ type PermissionRequest = {
   resolve: (result: PermissionResult) => void;
 };
 
-const PROVIDERS: ProviderName[] = ["openrouter", "openai", "gemini", "claude"];
+const PROVIDERS: ProviderName[] = [
+  "openrouter",
+  "openai",
+  "gemini",
+  "claude",
+];
 
 const MODES: CliMode[] = ["agent", "ask", "plan"];
+
+function formatPrice(price: number): string {
+  return price === 0
+    ? "Free"
+    : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
+}
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState("");
   const [permission, setPermission] = useState<PermissionRequest | null>(null);
-
   const [providerName, setProviderName] = useState<ProviderName | null>(null);
-
   const [mode, setMode] = useState<CliMode | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,21 +51,80 @@ function App() {
     cost: number;
   } | null>(null);
 
-  // const historyRef = useRef<Message[]>([]);
-  const session = createSession();
-  const permissionRef = useRef<PermissionRequest | null>(null);
-
+  const [openRouterModels, setOpenRouterModels] = useState<
+    OpenRouterModel[]
+  >([]);
+  const [openRouterModelId, setOpenRouterModelId] = useState<string | null>(
+    null,
+  );
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const [selectionIndex, setSelectionIndex] = useState(0);
 
-  const setupStep =
-    providerName === null ? "provider" : mode === null ? "mode" : "chat";
+  const session = useRef(createSession()).current;
+  const permissionRef = useRef<PermissionRequest | null>(null);
 
-  const provider = providerName ? createProvider(providerName) : null;
+  const setupStep =
+    providerName === null
+      ? "provider"
+      : providerName === "openrouter" && openRouterModelId === null
+        ? "model"
+        : mode === null
+          ? "mode"
+          : "chat";
+
+  const provider = providerName
+    ? createProvider(providerName, openRouterModelId ?? undefined)
+    : null;
+
+  useEffect(() => {
+    if (providerName !== "openrouter" || modelsLoaded) return;
+
+    let cancelled = false;
+
+    async function loadModels() {
+      setModelsLoading(true);
+      setModelsError(null);
+
+      try {
+        const models = await fetchOpenRouterModels();
+
+        if (!cancelled) {
+          setOpenRouterModels(models);
+          setModelsLoaded(true);
+          setSelectionIndex(0);
+
+          if (models.length === 0) {
+            setModelsError(
+              "No text-only models supporting tool calling were found.",
+            );
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setModelsError(
+            error instanceof Error ? error.message : "Failed to load models",
+          );
+          setModelsLoaded(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setModelsLoading(false);
+        }
+      }
+    }
+
+    void loadModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [providerName, modelsLoaded]);
 
   useInput((input, key) => {
     if (setupStep === "chat") {
       const request = permissionRef.current;
-
       if (!request) return;
 
       if (key.return || input.toLowerCase() === "y") {
@@ -60,16 +132,12 @@ function App() {
           behavior: "allow",
           updatedInput: request.input,
         });
-
         permissionRef.current = null;
         setPermission(null);
       }
 
       if (input.toLowerCase() === "n" || key.escape) {
-        request.resolve({
-          behavior: "deny",
-        });
-
+        request.resolve({ behavior: "deny" });
         permissionRef.current = null;
         setPermission(null);
       }
@@ -77,7 +145,37 @@ function App() {
       return;
     }
 
-    const options = setupStep === "provider" ? PROVIDERS : MODES;
+    if (setupStep === "model") {
+      if (modelsLoading || modelsError || openRouterModels.length === 0) {
+        return;
+      }
+
+      if (key.upArrow) {
+        setSelectionIndex((current) =>
+          current === 0 ? openRouterModels.length - 1 : current - 1,
+        );
+      }
+
+      if (key.downArrow) {
+        setSelectionIndex((current) =>
+          current === openRouterModels.length - 1 ? 0 : current + 1,
+        );
+      }
+
+      if (key.return) {
+        const selected = openRouterModels[selectionIndex];
+
+        if (selected) {
+          setOpenRouterModelId(selected.id);
+          setSelectionIndex(0);
+        }
+      }
+
+      return;
+    }
+
+    const options: readonly string[] =
+      setupStep === "provider" ? PROVIDERS : MODES;
 
     if (key.upArrow) {
       setSelectionIndex((current) =>
@@ -109,12 +207,7 @@ function App() {
     input: Record<string, string>,
   ): Promise<PermissionResult> => {
     return new Promise((resolve) => {
-      const request = {
-        toolName,
-        input,
-        resolve,
-      };
-
+      const request = { toolName, input, resolve };
       permissionRef.current = request;
       setPermission(request);
     });
@@ -132,17 +225,13 @@ function App() {
     if (command.type === "help") {
       setMessages((current) => [
         ...current,
-        {
-          role: "assistant",
-          content: command.output,
-        },
+        { role: "assistant", content: command.output },
       ]);
       return;
     }
 
     if (command.type === "mode") {
       setMode(command.mode);
-
       setMessages((current) => [
         ...current,
         {
@@ -157,11 +246,7 @@ function App() {
     setStatus("Thinking...");
     setUsage(null);
 
-    const userMessage: Message = {
-      role: "user",
-      content: value,
-    };
-
+    const userMessage: Message = { role: "user", content: value };
     setMessages((current) => [...current, userMessage]);
     addMessage(session, userMessage);
 
@@ -174,7 +259,6 @@ function App() {
         session,
         (chunk) => {
           assistantContent += chunk;
-
           setStatus("");
 
           setMessages((current) => {
@@ -183,36 +267,23 @@ function App() {
             if (lastMessage?.role === "assistant") {
               return [
                 ...current.slice(0, -1),
-                {
-                  role: "assistant",
-                  content: assistantContent,
-                },
+                { role: "assistant", content: assistantContent },
               ];
             }
 
             return [
               ...current,
-              {
-                role: "assistant",
-                content: assistantContent,
-              },
+              { role: "assistant", content: assistantContent },
             ];
           });
         },
-        (status) => {
-          setStatus(status);
-        },
+        (nextStatus) => setStatus(nextStatus),
         "",
         false,
         mode,
         requestPermission,
-        (inputTokens, outputTokens, cost) => {
-          setUsage({
-            inputTokens,
-            outputTokens,
-            cost,
-          });
-        },
+        (inputTokens, outputTokens, cost) =>
+          setUsage({ inputTokens, outputTokens, cost }),
       );
 
       if (assistantContent) {
@@ -230,7 +301,9 @@ function App() {
   }
 
   if (setupStep !== "chat") {
-    const options = setupStep === "provider" ? PROVIDERS : MODES;
+    // Keep provider/mode options separate from OpenRouterModel objects.
+    const options: readonly string[] =
+      setupStep === "provider" ? PROVIDERS : MODES;
 
     return (
       <Box flexDirection="column" borderStyle="round" padding={1}>
@@ -238,21 +311,70 @@ function App() {
 
         <Box marginTop={1} flexDirection="column">
           <Text bold>
-            {setupStep === "provider" ? "Choose a provider:" : "Choose a mode:"}
+            {setupStep === "provider"
+              ? "Choose a provider:"
+              : setupStep === "model"
+                ? "Choose an OpenRouter model:"
+                : "Choose a mode:"}
           </Text>
 
-          <Box marginTop={1} flexDirection="column">
-            {options.map((option, index) => (
-              <Text key={option}>
-                {index === selectionIndex ? "❯ " : "  "}
-                {option}
-              </Text>
-            ))}
-          </Box>
+          {setupStep === "model" && modelsLoading && (
+            <Box marginTop={1}>
+              <Text dimColor>Loading available models...</Text>
+            </Box>
+          )}
 
-          <Box marginTop={1}>
-            <Text dimColor>↑ ↓ select · Enter confirm</Text>
-          </Box>
+          {setupStep === "model" && modelsError && (
+            <Box marginTop={1} flexDirection="column">
+              <Text color="red">Failed to load models: {modelsError}</Text>
+              <Text dimColor>
+                Check your internet connection and restart ANAS CLI.
+              </Text>
+            </Box>
+          )}
+
+          {setupStep === "model" &&
+            !modelsLoading &&
+            !modelsError &&
+            openRouterModels.length > 0 && (
+              <Box marginTop={1} flexDirection="column">
+                {openRouterModels.map((model, index) => (
+                  <Box key={model.id} flexDirection="column" marginBottom={1}>
+                    <Text>
+                      {index === selectionIndex ? "❯ " : "  "}
+                      {model.name} {model.isFree ? "(Free)" : ""}
+                    </Text>
+
+                    <Text dimColor>
+                      {"    "}Input: {formatPrice(model.promptPrice)} · Output:{" "}
+                      {formatPrice(model.completionPrice)}
+                    </Text>
+
+                    <Text dimColor>{"    "}{model.id}</Text>
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+          {setupStep !== "model" && (
+            <Box marginTop={1} flexDirection="column">
+              {options.map((option, index) => (
+                <Text key={option}>
+                  {index === selectionIndex ? "❯ " : "  "}
+                  {option}
+                </Text>
+              ))}
+            </Box>
+          )}
+
+          {setupStep === "model" &&
+          (modelsLoading ||
+            modelsError ||
+            openRouterModels.length === 0) ? null : (
+            <Box marginTop={1}>
+              <Text dimColor>↑ ↓ select · Enter confirm</Text>
+            </Box>
+          )}
         </Box>
       </Box>
     );
@@ -288,3 +410,4 @@ function App() {
 }
 
 render(<App />);
+

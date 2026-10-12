@@ -1,0 +1,392 @@
+
+import OpenAI from "openai";
+import {
+  ProviderError,
+  type BaseProvider,
+  type Message,
+  type ProviderResponse,
+  type ToolCall,
+} from "./base.js";
+
+const TOOLS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "read_file",
+      description: "Read the contents of a file",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "The file path to read" },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "write_file",
+      description: "Write or create a file",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "The file path to write" },
+          content: { type: "string", description: "The content to write" },
+        },
+        required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "bash",
+      description: "Run a terminal command",
+      parameters: {
+        type: "object",
+        properties: {
+          command: { type: "string", description: "The command to run" },
+        },
+        required: ["command"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "glob",
+      description: "Find files matching a glob pattern",
+      parameters: {
+        type: "object",
+        properties: {
+          pattern: {
+            type: "string",
+            description: "The file pattern to search for",
+          },
+        },
+        required: ["pattern"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_dir",
+      description: "List files and folders in a directory",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "The directory path to list" },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "edit_file",
+      description: "Edit a specific part of a file by replacing exact text",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "The file path to edit" },
+          oldStr: {
+            type: "string",
+            description: "The exact text to find and replace",
+          },
+          newStr: {
+            type: "string",
+            description: "The new text to replace it with",
+          },
+        },
+        required: ["path", "oldStr", "newStr"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "git",
+      description: "Inspect Git repository state",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["status", "diff", "log", "branch"],
+            description: "The Git action to perform",
+          },
+        },
+        required: ["action"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "search_code",
+      description:
+        "Search project file contents for text, symbols, functions, classes, variables, imports, or other code. Use this instead of bash, grep, findstr, or similar commands for content searches.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The text to search for inside project files",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+];
+
+export class GroqProvider implements BaseProvider {
+  name = "groq";
+  private client: OpenAI;
+  private model: string;
+
+  constructor(apiKey: string) {
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: "https://api.groq.com/openai/v1",
+    });
+
+   this.model = "openai/gpt-oss-20b";
+  }
+
+  private buildMessages(messages: Message[], systemPrompt?: string): any[] {
+    const result: any[] = [];
+
+    if (systemPrompt) {
+      result.push({ role: "system", content: systemPrompt });
+    }
+
+    for (const message of messages) {
+      if (message.role === "user") {
+        result.push({ role: "user", content: message.content });
+      }
+
+      if (message.role === "assistant") {
+        const toolCalls =
+          message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
+
+        if (toolCalls.length > 0) {
+          result.push({
+            role: "assistant",
+            content: message.content || null,
+            tool_calls: toolCalls.map((toolCall) => ({
+              id: toolCall.id,
+              type: "function" as const,
+              function: {
+                name: toolCall.name,
+                arguments: JSON.stringify(toolCall.input),
+              },
+            })),
+          });
+        } else {
+          result.push({
+            role: "assistant",
+            content: message.content,
+          });
+        }
+      }
+
+      if (message.role === "tool") {
+        result.push({
+          role: "tool",
+          tool_call_id: message.toolCallId,
+          content: message.content,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async sendMessage(
+    messages: Message[],
+    systemPrompt?: string,
+  ): Promise<ProviderResponse> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: this.buildMessages(messages, systemPrompt),
+        tools: TOOLS,
+        tool_choice: "auto",
+        temperature: 0.2,
+      });
+
+      const message = response.choices[0].message;
+
+      const toolCalls: ToolCall[] = (message.tool_calls ?? [])
+        .filter((call) => call.type === "function")
+        .map((call) => ({
+          id: call.id,
+          name: call.function.name,
+          input: JSON.parse(call.function.arguments || "{}"),
+        }));
+
+      if (toolCalls.length > 0) {
+        return {
+          content: message.content ?? "",
+          toolCall: toolCalls[0],
+          toolCalls,
+          inputTokens: response.usage?.prompt_tokens,
+          outputTokens: response.usage?.completion_tokens,
+        };
+      }
+
+      return {
+        content: message.content ?? "",
+        inputTokens: response.usage?.prompt_tokens,
+        outputTokens: response.usage?.completion_tokens,
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async streamMessage(
+    messages: Message[],
+    onChunk: (chunk: string) => void,
+    systemPrompt?: string,
+  ): Promise<ProviderResponse> {
+    try {
+      let fullContent = "";
+
+      const toolCallsByIndex = new Map<
+        number,
+        { id: string; name: string; arguments: string }
+      >();
+
+      const stream = await this.client.chat.completions.create({
+        model: this.model,
+        messages: this.buildMessages(messages, systemPrompt),
+        tools: TOOLS,
+        tool_choice: "auto",
+        temperature: 0.2,
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      let inputTokens = 0;
+      let outputTokens = 0;
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+
+        if (chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens;
+          outputTokens = chunk.usage.completion_tokens;
+        }
+
+        const text = delta?.content ?? "";
+
+        if (text) {
+          fullContent += text;
+          onChunk(text);
+        }
+
+        for (const toolCall of delta?.tool_calls ?? []) {
+          const index = toolCall.index;
+
+          const existing = toolCallsByIndex.get(index) ?? {
+            id: "",
+            name: "",
+            arguments: "",
+          };
+
+          if (toolCall.id) {
+            existing.id = toolCall.id;
+          }
+
+          if (toolCall.function?.name) {
+            existing.name += toolCall.function.name;
+          }
+
+          if (toolCall.function?.arguments) {
+            existing.arguments += toolCall.function.arguments;
+          }
+
+          toolCallsByIndex.set(index, existing);
+        }
+      }
+
+      if (toolCallsByIndex.size > 0) {
+        const toolCalls: ToolCall[] = [...toolCallsByIndex.values()].map(
+          (call) => ({
+            id: call.id,
+            name: call.name,
+            input: JSON.parse(call.arguments || "{}"),
+          }),
+        );
+
+        return {
+          content: fullContent,
+          toolCall: toolCalls[0],
+          toolCalls,
+          inputTokens,
+          outputTokens,
+        };
+      }
+
+      return {
+        content: fullContent,
+        inputTokens,
+        outputTokens,
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  private handleError(error: unknown): never {
+    if (error instanceof OpenAI.APIError) {
+      if (error.status === 401) {
+        throw new ProviderError("Invalid Groq API key.", 401, false);
+      }
+
+      if (error.status === 429) {
+        throw new ProviderError(
+          "Groq rate limit exceeded. Check your usage limits.",
+          429,
+          true,
+        );
+      }
+
+      if (error.status === 400) {
+         console.error("Groq error details:", error.error);
+        throw new ProviderError(
+          `Groq request error: ${error.message}`,
+          400,
+          false,
+        );
+      }
+
+      if (error.status === 500 || error.status === 502 || error.status === 503) {
+        throw new ProviderError(
+          `Groq API error (${error.status}): ${error.message}`,
+          error.status,
+          true,
+        );
+      }
+
+      throw new ProviderError(
+        `Groq API error (${error.status}): ${error.message}`,
+        error.status,
+        false,
+      );
+    }
+
+    throw new ProviderError(
+      `Network or connection error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      undefined,
+      true,
+    );
+  }
+}

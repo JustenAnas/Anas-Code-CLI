@@ -1,14 +1,16 @@
+
 import {
   GoogleGenerativeAI,
   SchemaType,
   type Tool,
 } from "@google/generative-ai";
 
-import type {
-  BaseProvider,
-  Message,
-  ProviderResponse,
-  ToolCall,
+import {
+  ProviderError,
+  type BaseProvider,
+  type Message,
+  type ProviderResponse,
+  type ToolCall,
 } from "./base.js";
 
 const TOOLS: Tool[] = [
@@ -20,10 +22,7 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: {
-              type: SchemaType.STRING,
-              description: "The file path to read",
-            },
+            path: { type: SchemaType.STRING, description: "The file path to read" },
           },
           required: ["path"],
         },
@@ -34,14 +33,8 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: {
-              type: SchemaType.STRING,
-              description: "The file path to write",
-            },
-            content: {
-              type: SchemaType.STRING,
-              description: "The content to write",
-            },
+            path: { type: SchemaType.STRING, description: "The file path to write" },
+            content: { type: SchemaType.STRING, description: "The content to write" },
           },
           required: ["path", "content"],
         },
@@ -52,10 +45,7 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            command: {
-              type: SchemaType.STRING,
-              description: "The terminal command to run",
-            },
+            command: { type: SchemaType.STRING, description: "The command to run" },
           },
           required: ["command"],
         },
@@ -66,10 +56,7 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            pattern: {
-              type: SchemaType.STRING,
-              description: "The file pattern to search for",
-            },
+            pattern: { type: SchemaType.STRING, description: "The file pattern to search for" },
           },
           required: ["pattern"],
         },
@@ -80,12 +67,50 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: {
-              type: SchemaType.STRING,
-              description: "The directory path to list",
-            },
+            path: { type: SchemaType.STRING, description: "The directory path to list" },
           },
           required: ["path"],
+        },
+      },
+      {
+        name: "edit_file",
+        description: "Replace exact text in a file",
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            path: { type: SchemaType.STRING, description: "The file path to edit" },
+            oldStr: { type: SchemaType.STRING, description: "Exact text to replace" },
+            newStr: { type: SchemaType.STRING, description: "Replacement text" },
+          },
+          required: ["path", "oldStr", "newStr"],
+        },
+      },
+      {
+        name: "git",
+        description: "Inspect Git repository state",
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            action: {
+              type: SchemaType.STRING,
+               format: "enum",
+              enum: ["status", "diff", "log", "branch"],
+              description: "The Git action to perform",
+            },
+          },
+          required: ["action"],
+        },
+      },
+      {
+        name: "search_code",
+        description:
+          "Search project file contents for text, symbols, functions, classes, variables, or imports. Use instead of terminal commands for content searches.",
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            query: { type: SchemaType.STRING, description: "Text to search for inside project files" },
+          },
+          required: ["query"],
         },
       },
     ],
@@ -94,15 +119,16 @@ const TOOLS: Tool[] = [
 
 export class GeminiProvider implements BaseProvider {
   name = "gemini";
+
   private client: GoogleGenerativeAI;
   private model: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, model = "gemini-3.6-flash") {
     this.client = new GoogleGenerativeAI(apiKey);
-    this.model = "gemini-3.6-flash";
+    this.model = model;
   }
 
-  private buildHistory(messages: Message[]) {
+  private buildHistory(messages: Message[]): any[] {
     const history: any[] = [];
 
     for (let i = 0; i < messages.length; i++) {
@@ -117,17 +143,19 @@ export class GeminiProvider implements BaseProvider {
       }
 
       if (message.role === "assistant") {
-        if (message.toolCall) {
+        const calls =
+          message.toolCalls ??
+          (message.toolCall ? [message.toolCall] : []);
+
+        if (calls.length > 0) {
           history.push({
             role: "model",
-            parts: [
-              {
-                functionCall: {
-                  name: message.toolCall.name,
-                  args: message.toolCall.input,
-                },
+            parts: calls.map((call) => ({
+              functionCall: {
+                name: call.name,
+                args: call.input,
               },
-            ],
+            })),
           });
         } else if (message.content) {
           history.push({
@@ -140,11 +168,15 @@ export class GeminiProvider implements BaseProvider {
       }
 
       if (message.role === "tool") {
+        // Gemini expects function responses, not plain-text tool messages.
         history.push({
           role: "user",
           parts: [
             {
-              text: `Tool result:\n${message.content}`,
+              functionResponse: {
+                name: this.findToolName(messages, i),
+                response: { result: message.content },
+              },
             },
           ],
         });
@@ -154,45 +186,105 @@ export class GeminiProvider implements BaseProvider {
     return history;
   }
 
+  private findToolName(messages: Message[], toolIndex: number): string {
+    const toolMessage = messages[toolIndex];
+
+    if (toolMessage.role !== "tool") return "unknown_tool";
+
+    // Prefer the assistant's recorded call ID/name when available.
+    for (let i = toolIndex - 1; i >= 0; i--) {
+      const previous = messages[i];
+
+      if (previous.role !== "assistant") continue;
+
+      const calls =
+        previous.toolCalls ??
+        (previous.toolCall ? [previous.toolCall] : []);
+
+      const matching = calls.find(
+        (call) => call.id === toolMessage.toolCallId,
+      );
+
+      if (matching) return matching.name;
+
+      break;
+    }
+
+    return "unknown_tool";
+  }
+
+  private toToolCalls(calls: any[] | undefined): ToolCall[] {
+    return (calls ?? []).map((call) => ({
+      id: `${call.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: call.name,
+      input: call.args ?? {},
+    }));
+  }
+
+  private handleError(error: unknown): never {
+    const message = error instanceof Error ? error.message : String(error);
+    const statusMatch = message.match(/\b(400|401|403|404|408|429|500|502|503|504)\b/);
+    const status = statusMatch ? Number(statusMatch[1]) : undefined;
+
+    if (status === 401 || status === 403) {
+      throw new ProviderError("Invalid Gemini API key or API access denied.", status, false);
+    }
+
+    if (status === 429) {
+      throw new ProviderError("Gemini rate limit exceeded.", 429, true);
+    }
+
+    if (status === 400) {
+      throw new ProviderError(`Gemini request error: ${message}`, 400, false);
+    }
+
+    if (status && status >= 500) {
+      throw new ProviderError(`Gemini API error (${status}): ${message}`, status, true);
+    }
+
+    throw new ProviderError(
+      `Gemini provider error: ${message}`,
+      status,
+      status === undefined || status === 408,
+    );
+  }
+
   async sendMessage(
     messages: Message[],
     systemPrompt?: string,
   ): Promise<ProviderResponse> {
-    const geminiModel = this.client.getGenerativeModel({
-      model: this.model,
-      systemInstruction: systemPrompt,
-      tools: TOOLS,
-    });
+    try {
+      const model = this.client.getGenerativeModel({
+        model: this.model,
+        ...(systemPrompt ? { systemInstruction: systemPrompt } : {}),
+        tools: TOOLS,
+      });
 
-    const lastMessage = messages[messages.length - 1];
-    const history = this.buildHistory(messages.slice(0, -1));
+      const lastMessage = messages[messages.length - 1];
 
-    const chat = geminiModel.startChat({
-      history,
-    });
+      if (!lastMessage || lastMessage.role !== "user") {
+        throw new ProviderError("Gemini expected a user message.", 400, false);
+      }
 
-    const result = await chat.sendMessage(lastMessage.content);
+      const history = this.buildHistory(messages.slice(0, -1));
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(lastMessage.content);
+      const response = result.response;
 
-    const functionCalls = result.response.functionCalls();
-
-    if (functionCalls && functionCalls.length > 0) {
-      const call = functionCalls[0];
-
-      const toolCall: ToolCall = {
-        id: `${call.name}-${Date.now()}`,
-        name: call.name,
-        input: call.args as Record<string, string>,
-      };
+      const toolCalls = this.toToolCalls(response.functionCalls());
 
       return {
-        content: "",
-        toolCall,
+        content: response.text(),
+        ...(toolCalls.length
+          ? { toolCall: toolCalls[0], toolCalls }
+          : {}),
+        inputTokens: response.usageMetadata?.promptTokenCount,
+        outputTokens: response.usageMetadata?.candidatesTokenCount,
       };
+    } catch (error) {
+      if (error instanceof ProviderError) throw error;
+      this.handleError(error);
     }
-
-    return {
-      content: result.response.text(),
-    };
   }
 
   async streamMessage(
@@ -200,81 +292,52 @@ export class GeminiProvider implements BaseProvider {
     onChunk: (chunk: string) => void,
     systemPrompt?: string,
   ): Promise<ProviderResponse> {
-    const geminiModel = this.client.getGenerativeModel({
-      model: this.model,
-      systemInstruction: systemPrompt,
-      tools: TOOLS,
-    });
+    try {
+      const model = this.client.getGenerativeModel({
+        model: this.model,
+        ...(systemPrompt ? { systemInstruction: systemPrompt } : {}),
+        tools: TOOLS,
+      });
 
-    const lastMessage = messages[messages.length - 1];
-    const history = this.buildHistory(messages.slice(0, -1));
+      const lastMessage = messages[messages.length - 1];
 
-    const MAX_RETRIES = 5;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const chat = geminiModel.startChat({
-          history,
-        });
-
-        const result = await chat.sendMessageStream(lastMessage.content);
-
-        let fullContent = "";
-        let toolCall: ToolCall | undefined;
-
-        for await (const chunk of result.stream) {
-          const functionCalls = chunk.functionCalls();
-
-          if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
-
-            toolCall = {
-              id: `${call.name}-${Date.now()}`,
-              name: call.name,
-              input: call.args as Record<string, string>,
-            };
-
-            continue;
-          }
-
-          const text = chunk.text();
-
-          if (text) {
-            fullContent += text;
-          }
-        }
-
-        if (fullContent) {
-          onChunk(fullContent);
-        }
-
-        return {
-          content: fullContent,
-          toolCall,
-        };
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-        const isRetryable =
-          errorMessage.includes("503") ||
-          errorMessage.includes("429") ||
-          errorMessage.includes("Service Unavailable") ||
-          errorMessage.includes("high demand");
-
-        if (!isRetryable || attempt === MAX_RETRIES) {
-          throw new Error(
-            "Too many broke people using your AI. This fault is not from our side — blame your AI, not us.",
-          );
-        }
-
-        const delay = 2000 * 2 ** attempt;
-        await new Promise((resolve) => setTimeout(resolve, delay));
+      if (!lastMessage || lastMessage.role !== "user") {
+        throw new ProviderError("Gemini expected a user message.", 400, false);
       }
-    }
 
-    throw new Error(
-      "Too many broke people using your AI. This fault is not from our side — blame your AI, not us.",
-    );
+      const history = this.buildHistory(messages.slice(0, -1));
+      const chat = model.startChat({ history });
+
+      const result = await chat.sendMessageStream(lastMessage.content);
+
+      let fullContent = "";
+      let latestResponse: any;
+
+      for await (const chunk of result.stream) {
+        latestResponse = chunk;
+
+        const text = chunk.text();
+
+        if (text) {
+          fullContent += text;
+          onChunk(text);
+        }
+      }
+
+      const response = await result.response;
+      const toolCalls = this.toToolCalls(response.functionCalls());
+
+      return {
+        content: fullContent,
+        ...(toolCalls.length
+          ? { toolCall: toolCalls[0], toolCalls }
+          : {}),
+        inputTokens: response.usageMetadata?.promptTokenCount,
+        outputTokens: response.usageMetadata?.candidatesTokenCount,
+      };
+    } catch (error) {
+      if (error instanceof ProviderError) throw error;
+      this.handleError(error);
+    }
   }
 }

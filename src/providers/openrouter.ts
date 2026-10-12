@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type {
   BaseProvider,
   Message,
@@ -6,7 +7,7 @@ import type {
   ToolCall,
 } from "./base.js";
 
-const TOOLS = [
+const TOOLS: ChatCompletionTool[] = [
   {
     type: "function" as const,
     function: {
@@ -84,7 +85,7 @@ const TOOLS = [
     function: {
       name: "list_dir",
       description: "List files and folders in a directory",
-      input_schema: {
+      parameters: {
         type: "object",
         properties: {
           path: {
@@ -97,6 +98,75 @@ const TOOLS = [
     },
   },
 ];
+
+
+export type OpenRouterModel = {
+  id: string;
+  name: string;
+  promptPrice: number;
+  completionPrice: number;
+  isFree: boolean;
+};
+
+export async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
+  const response = await fetch("https://openrouter.ai/api/v1/models");
+
+  if (!response.ok) {
+    throw new Error(`OpenRouter model request failed: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    data: Array<{
+      id: string;
+      name: string;
+      architecture?: {
+        input_modalities?: string[];
+        output_modalities?: string[];
+      };
+      pricing?: {
+        prompt?: string;
+        completion?: string;
+      };
+      supported_parameters?: string[];
+    }>;
+  };
+
+  return data.data
+    .filter((model) => {
+      const inputs = model.architecture?.input_modalities ?? [];
+      const outputs = model.architecture?.output_modalities ?? [];
+
+      // Text input and text output only.
+      const textOnly =
+        inputs.length === 1 &&
+        inputs.includes("text") &&
+        outputs.length === 1 &&
+        outputs.includes("text");
+
+      // ANAS CLI needs native tool calling.
+      const supportsTools =
+        model.supported_parameters?.includes("tools") ?? false;
+
+      return textOnly && supportsTools;
+    })
+    .map((model) => {
+      const promptPrice = Number(model.pricing?.prompt ?? "0");
+      const completionPrice = Number(model.pricing?.completion ?? "0");
+
+      return {
+        id: model.id,
+        name: model.name,
+        promptPrice,
+        completionPrice,
+        isFree: promptPrice === 0 && completionPrice === 0,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(b.isFree) - Number(a.isFree) ||
+        a.name.localeCompare(b.name),
+    );
+}
 
 export class OpenRouterProvider implements BaseProvider {
   name = "openrouter";
