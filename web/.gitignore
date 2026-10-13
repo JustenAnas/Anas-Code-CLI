@@ -40,4 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/dist
+/dist.claude/
+.cursor/
+.agents/
+.devin/

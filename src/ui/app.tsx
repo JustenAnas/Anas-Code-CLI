@@ -1,5 +1,8 @@
+
 import "dotenv/config";
 import React, { useEffect, useRef, useState } from "react";
+import { loadCloudMemory } from "../agent/memory.js";
+import { cloudClient } from "../cloud/client.js";
 import { render, Box, Text, useInput } from "ink";
 import { Header } from "./Header.js";
 import { Chat } from "./Chat.js";
@@ -213,6 +216,49 @@ function App() {
     });
   };
 
+  async function syncConversation(): Promise<void> {
+    if (!cloudClient.isLoggedIn) {
+      console.error(
+        "[Cloud Sync] Not logged in; skipping conversation sync.",
+      );
+      return;
+    }
+
+    try {
+      const firstUserMessage = session.messages.find(
+        (message) => message.role === "user",
+      );
+
+      await cloudClient.saveSession({
+        localSessionId: session.id,
+        title: firstUserMessage?.content.slice(0, 80) || "ANAS CLI session",
+        workingDirectory: process.cwd(),
+      });
+
+      for (const message of session.messages) {
+        message.localMessageId ??= crypto.randomUUID();
+
+        await cloudClient.saveMessage(session.id, {
+          localMessageId: message.localMessageId,
+          role: message.role,
+          content: message.content,
+          toolCallId: message.toolCallId,
+          toolCall: message.toolCall,
+          toolCalls: message.toolCalls,
+        });
+      }
+
+      console.log(
+        `[Cloud Sync] Synced ${session.messages.length} messages successfully.`,
+      );
+    } catch (error) {
+      console.error(
+        "[Cloud Sync] Failed:",
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
   async function handleSubmit(value: string) {
     if (busy || !provider || !mode) return;
 
@@ -247,19 +293,57 @@ function App() {
     setUsage(null);
 
     const userMessage: Message = { role: "user", content: value };
+
     setMessages((current) => [...current, userMessage]);
     addMessage(session, userMessage);
 
     let assistantContent = "";
 
     try {
+      await loadCloudMemory(session.memory);
+
+      if (cloudClient.isLoggedIn) {
+        try {
+          await cloudClient.saveSession({
+            localSessionId: session.id,
+            title: value.slice(0, 80),
+            workingDirectory: process.cwd(),
+          });
+
+          const storedUserMessage =
+            session.messages[session.messages.length - 1];
+
+          if (storedUserMessage) {
+            storedUserMessage.localMessageId ??= crypto.randomUUID();
+
+            await cloudClient.saveMessage(session.id, {
+              localMessageId: storedUserMessage.localMessageId,
+              role: storedUserMessage.role,
+              content: storedUserMessage.content,
+              toolCallId: storedUserMessage.toolCallId,
+              toolCall: storedUserMessage.toolCall,
+              toolCalls: storedUserMessage.toolCalls,
+            });
+          }
+        } catch (error) {
+          console.error(
+            "[Cloud Sync] Failed to save the user message:",
+            error instanceof Error ? error.message : error,
+          );
+        }
+      } else {
+        console.error(
+          "[Cloud Sync] Not logged in; user message was not synced.",
+        );
+      }
+
       await runAgentLoop(
         value,
         provider,
         session,
         (chunk) => {
-          assistantContent += chunk;
           setStatus("");
+          assistantContent += chunk;
 
           setMessages((current) => {
             const lastMessage = current[current.length - 1];
@@ -285,14 +369,14 @@ function App() {
         (inputTokens, outputTokens, cost) =>
           setUsage({ inputTokens, outputTokens, cost }),
       );
-
-      if (assistantContent) {
-        addMessage(session, {
-          role: "assistant",
-          content: assistantContent,
-        });
-      }
+    } catch (error) {
+      console.error(
+        "[ANAS CLI] Request failed:",
+        error instanceof Error ? error.message : error,
+      );
     } finally {
+      await syncConversation();
+
       setBusy(false);
       setStatus("");
       setPermission(null);
@@ -301,7 +385,6 @@ function App() {
   }
 
   if (setupStep !== "chat") {
-    // Keep provider/mode options separate from OpenRouterModel objects.
     const options: readonly string[] =
       setupStep === "provider" ? PROVIDERS : MODES;
 
@@ -350,7 +433,9 @@ function App() {
                       {formatPrice(model.completionPrice)}
                     </Text>
 
-                    <Text dimColor>{"    "}{model.id}</Text>
+                    <Text dimColor>
+                      {"    "}{model.id}
+                    </Text>
                   </Box>
                 ))}
               </Box>
@@ -410,4 +495,3 @@ function App() {
 }
 
 render(<App />);
-

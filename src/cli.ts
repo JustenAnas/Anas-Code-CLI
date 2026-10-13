@@ -1,4 +1,4 @@
-
+import { cloudLogin, cloudLogout } from "./commands/cloud-auth.js";
 import { Command } from "commander";
 import { printBanner } from "./ui/banner.js";
 import chalk from "chalk";
@@ -94,6 +94,20 @@ export function createCli() {
     .option("-v, --verbose", "Show token usage and cost", false)
     .action(async (prompt: string, opts: { verbose: boolean }) => {
       await runQuery(prompt, { verbose: opts.verbose });
+    });
+
+      program
+    .command("login")
+    .description("Log in to ANAS Cloud")
+    .action(async () => {
+      await cloudLogin();
+    });
+
+  program
+    .command("logout")
+    .description("Log out of ANAS Cloud")
+    .action(async () => {
+      await cloudLogout();
     });
 
   program.action(() => {

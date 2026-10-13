@@ -1,0 +1,54 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CloudSession {
+  id               String         @id @default(cuid())
+  userId           String
+  localSessionId   String
+  title            String         @default("New session")
+  workingDirectory String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  messages         CloudMessage[]
+
+  @@unique([userId, localSessionId])
+  @@index([userId, updatedAt])
+}
+
+model CloudMessage {
+  id             String       @id @default(cuid())
+  sessionId      String
+  localMessageId String
+  role           String
+  content        String       @db.Text
+
+  toolCallId     String?
+  toolCall       Json?
+  toolCalls      Json?
+
+  createdAt      DateTime     @default(now())
+  session        CloudSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, localMessageId])
+  @@index([sessionId, createdAt])
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+

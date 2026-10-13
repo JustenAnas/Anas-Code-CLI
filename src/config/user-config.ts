@@ -3,14 +3,16 @@ import type { ProviderName } from "../providers/factory.js";
 import type { CliMode } from "../agent/modes.js";
 
 type UserConfig = {
-  provider: ProviderName;
-  mode: CliMode;
+provider: ProviderName;
+mode: CliMode;
+cloudToken?: string;
+cloudEmail?: string;
 };
 
 export const config = new Conf<UserConfig>({
-  projectName: "anas-cli",
-  defaults: {
-    provider: "openai",
-    mode: "agent",
-  },
+projectName: "anas-cli",
+defaults: {
+provider: "openai",
+mode: "agent",
+},
 });

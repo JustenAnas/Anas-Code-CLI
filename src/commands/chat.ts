@@ -1,3 +1,4 @@
+
 import { input, confirm, select } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import type { CliMode } from "../agent/modes.js";
@@ -9,6 +10,7 @@ import { handleCommand } from "./handler.js";
 import { addMessage } from "../agent/session.js";
 import { SessionStore } from "../agent/session-store.js";
 import { resolveFileReferences } from "../agent/file-references.js";
+import { cloudClient } from "../cloud/client.js";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -42,11 +44,50 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const sessionStore = new SessionStore();
   let session = sessionStore.create();
 
-  if (context) {
-    addMessage(session, {
-      role: "assistant",
-      content: `I have scanned your project structure:${context}`,
-    });
+   
+
+  async function syncConversation(): Promise<void> {
+    if (!cloudClient.isLoggedIn) {
+      console.error(
+        "[Cloud Sync] Not logged in; skipping conversation sync.",
+      );
+      return;
+    }
+
+    try {
+      const firstUserMessage = session.messages.find(
+        (message) => message.role === "user",
+      );
+
+      await cloudClient.saveSession({
+        localSessionId: session.id,
+        title:
+          firstUserMessage?.content.slice(0, 80) || "ANAS CLI session",
+        workingDirectory: process.cwd(),
+      });
+
+      for (const message of session.messages) {
+        message.localMessageId ??= crypto.randomUUID();
+
+        await cloudClient.saveMessage(session.id, {
+          localMessageId: message.localMessageId,
+          role: message.role,
+          content: message.content,
+          toolCallId: message.toolCallId,
+          toolCall: message.toolCall,
+          toolCalls: message.toolCalls,
+        });
+      }
+
+      console.log(
+        `[Cloud Sync] Synced ${session.messages.length} messages successfully.`,
+      );
+    } catch (error) {
+      console.error(
+        "[Cloud Sync] Failed:",
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   console.log(
@@ -143,6 +184,10 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
     }
 
     try {
+      addMessage(session, {
+  role: "user",
+  content: enrichedPrompt,
+});
       let firstChunk = true;
 
       const plan = await runAgentLoop(
@@ -160,8 +205,8 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           process.stdout.write(chunk);
         },
         (status) => console.log(`\n[DEBUG] ${status}`),
-        "",
-        verbose,
+        context,
+verbose,
         mode,
       );
 
@@ -183,6 +228,11 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
           let executionFirstChunk = true;
 
+          addMessage(session, {
+  role: "user",
+  content: executionPrompt,
+});
+
           await runAgentLoop(
             executionPrompt,
             provider,
@@ -196,7 +246,7 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
               process.stdout.write(chunk);
             },
             (status) => console.log(`\n[DEBUG] ${status}`),
-            "",
+            context,
             verbose,
             mode,
           );
@@ -210,9 +260,10 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
       console.error(
         fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
       );
+    } finally {
+      await syncConversation();
     }
   }
 
   console.log(fmt.dim("Session ended."));
 }
-
