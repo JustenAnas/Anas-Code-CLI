@@ -1,3 +1,4 @@
+
 import OpenAI from "openai";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type {
@@ -197,21 +198,26 @@ export class OpenRouterProvider implements BaseProvider {
         };
       }
 
-      if (message.role === "assistant" && message.toolCall) {
-        return {
-          role: "assistant" as const,
-          content: message.content || null,
-          tool_calls: [
-            {
-              id: message.toolCall.id!,
+      if (message.role === "assistant") {
+        // Support both singular and plural tool-call history.
+        const toolCalls =
+          message.toolCalls ??
+          (message.toolCall ? [message.toolCall] : []);
+
+        if (toolCalls.length > 0) {
+          return {
+            role: "assistant" as const,
+            content: message.content || null,
+            tool_calls: toolCalls.map((call) => ({
+              id: call.id!,
               type: "function" as const,
               function: {
-                name: message.toolCall.name,
-                arguments: JSON.stringify(message.toolCall.input),
+                name: call.name,
+                arguments: JSON.stringify(call.input),
               },
-            },
-          ],
-        };
+            })),
+          };
+        }
       }
 
       return {
