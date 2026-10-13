@@ -1,4 +1,4 @@
-import type { Session } from "./session.js";
+import type { Session, SessionMessage } from "./session.js";
 import { createSession } from "./session.js";
 import type { Memory } from "./memory.js";
 import { createMemory } from "./memory.js";
@@ -11,6 +11,26 @@ export class SessionStore {
   create(): Session {
     const session = createSession();
 
+    session.memory = this.memory;
+
+    this.sessions.set(session.id, session);
+    this.activeSessionId = session.id;
+
+    return session;
+  }
+
+  restore(
+    id: string,
+    messages: SessionMessage[],
+    createdAt?: Date,
+    updatedAt?: Date,
+  ): Session {
+    const session = createSession();
+
+    session.id = id;
+    session.messages = messages;
+    session.createdAt = createdAt ?? new Date();
+    session.updatedAt = updatedAt ?? new Date();
     session.memory = this.memory;
 
     this.sessions.set(session.id, session);
@@ -54,3 +74,4 @@ export class SessionStore {
     return deleted;
   }
 }
+

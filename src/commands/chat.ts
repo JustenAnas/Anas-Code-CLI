@@ -44,8 +44,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   const sessionStore = new SessionStore();
   let session = sessionStore.create();
 
-   
-
   async function syncConversation(): Promise<void> {
     if (!cloudClient.isLoggedIn) {
       console.error(
@@ -141,34 +139,118 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
     }
 
     if (command.type === "resume") {
-      const sessions = sessionStore
+      const localSessions = sessionStore
         .getAll()
         .filter((storedSession) => storedSession.id !== session.id);
 
-      if (sessions.length === 0) {
+      let cloudSessions: Awaited<
+        ReturnType<typeof cloudClient.listSessions>
+      > = [];
+
+      if (cloudClient.isLoggedIn) {
+        try {
+          cloudSessions = await cloudClient.listSessions();
+        } catch (error) {
+          console.error(
+            fmt.error(
+              `Could not load cloud sessions: ${
+                error instanceof Error ? error.message : error
+              }`,
+            ),
+          );
+        }
+      }
+
+      const availableCloudSessions = cloudSessions.filter(
+        (cloudSession) =>
+          cloudSession.localSessionId !== session.id &&
+          !sessionStore.get(cloudSession.localSessionId),
+      );
+
+      const choices = [
+        ...localSessions.map((storedSession) => ({
+          name: `[Local] ${storedSession.id} · ${storedSession.updatedAt.toLocaleString()} · ${storedSession.messages.length} messages`,
+          value: `local:${storedSession.id}`,
+        })),
+        ...availableCloudSessions.map((cloudSession) => ({
+          name: `[Cloud] ${cloudSession.title} · ${new Date(
+            cloudSession.updatedAt,
+          ).toLocaleString()}`,
+          value: `cloud:${cloudSession.localSessionId}`,
+        })),
+      ];
+
+      if (choices.length === 0) {
         console.log(fmt.dim("\nNo previous sessions found.\n"));
         continue;
       }
 
-      const selectedId = await select({
+      const selected = await select({
         message: "Resume session:",
-        choices: sessions.map((storedSession) => ({
-          name: `${storedSession.id} · ${storedSession.updatedAt.toLocaleString()} · ${storedSession.messages.length} messages`,
-          value: storedSession.id,
-        })),
+        choices,
       });
 
-      const selectedSession = sessionStore.get(selectedId);
+      if (selected.startsWith("local:")) {
+        const selectedId = selected.slice("local:".length);
+        const selectedSession = sessionStore.get(selectedId);
 
-      if (!selectedSession) {
-        console.log(fmt.error("Session not found."));
-        continue;
+        if (!selectedSession) {
+          console.log(fmt.error("Session not found."));
+          continue;
+        }
+
+        sessionStore.setActive(selectedSession.id);
+        session = selectedSession;
+      } else {
+        const localSessionId = selected.slice("cloud:".length);
+
+        try {
+          const cloudSession = availableCloudSessions.find(
+            (item) => item.localSessionId === localSessionId,
+          );
+
+          if (!cloudSession) {
+            console.log(fmt.error("Cloud session not found."));
+            continue;
+          }
+
+          const cloudMessages =
+            await cloudClient.listMessages(localSessionId);
+
+          const restoredMessages = cloudMessages
+            .filter((message) => message.role !== "system")
+            .map((message) => ({
+              role: message.role as "assistant" | "user" | "tool",
+              content: message.content,
+              localMessageId: message.localMessageId,
+              ...(message.toolCallId
+                ? { toolCallId: message.toolCallId }
+                : {}),
+              ...(message.toolCall ? { toolCall: message.toolCall } : {}),
+              ...(message.toolCalls ? { toolCalls: message.toolCalls } : {}),
+            }));
+
+          session = sessionStore.restore(
+            localSessionId,
+            restoredMessages,
+            new Date(cloudSession.createdAt),
+            new Date(cloudSession.updatedAt),
+          );
+        } catch (error) {
+          console.error(
+            fmt.error(
+              `Could not resume cloud session: ${
+                error instanceof Error ? error.message : error
+              }`,
+            ),
+          );
+          continue;
+        }
       }
 
-      sessionStore.setActive(selectedSession.id);
-      session = selectedSession;
-
-      console.log(fmt.mode("\nSession resumed.\n"));
+      console.log(
+        fmt.mode(`\nSession resumed · ${session.messages.length} messages.\n`),
+      );
       continue;
     }
 
@@ -185,9 +267,10 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
     try {
       addMessage(session, {
-  role: "user",
-  content: enrichedPrompt,
-});
+        role: "user",
+        content: enrichedPrompt,
+      });
+
       let firstChunk = true;
 
       const plan = await runAgentLoop(
@@ -206,7 +289,7 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
         },
         (status) => console.log(`\n[DEBUG] ${status}`),
         context,
-verbose,
+        verbose,
         mode,
       );
 
@@ -229,9 +312,9 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
           let executionFirstChunk = true;
 
           addMessage(session, {
-  role: "user",
-  content: executionPrompt,
-});
+            role: "user",
+            content: executionPrompt,
+          });
 
           await runAgentLoop(
             executionPrompt,
@@ -267,3 +350,4 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
   console.log(fmt.dim("Session ended."));
 }
+
