@@ -1,4 +1,3 @@
-
 import OpenAI from "openai";
 import {
   ProviderError,
@@ -167,8 +166,7 @@ export class OpenAIProvider implements BaseProvider {
 
       if (message.role === "assistant") {
         const toolCalls =
-          message.toolCalls ??
-          (message.toolCall ? [message.toolCall] : []);
+          message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
 
         if (toolCalls.length > 0) {
           result.push({

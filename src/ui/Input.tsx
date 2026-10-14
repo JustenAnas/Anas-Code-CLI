@@ -18,9 +18,9 @@ export function Input({ onSubmit }: InputProps) {
   }, []);
 
   usePaste((pastedText) => {
-  console.log("[PASTE DEBUG]", JSON.stringify(pastedText));
-  setValue((current) => current + pastedText);
-});
+    console.log("[PASTE DEBUG]", JSON.stringify(pastedText));
+    setValue((current) => current + pastedText);
+  });
 
   useInput((input, key) => {
     console.log("[INPUT DEBUG]", { input, key });

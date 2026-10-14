@@ -1,84 +1,79 @@
 import type { BaseProvider, Message } from "../providers/base.js";
 import { cloudClient } from "../cloud/client.js";
 
-
 export type Memory = {
-items: string[];
+  items: string[];
 };
 
 const CLOUD_MEMORY_KEY = "agent-memory";
 
 export function createMemory(): Memory {
-return {
-items: [],
-};
+  return {
+    items: [],
+  };
 }
 
 export function addMemory(memory: Memory, item: string): void {
-if (!memory.items.includes(item)) {
-memory.items.push(item);
-}
+  if (!memory.items.includes(item)) {
+    memory.items.push(item);
+  }
 }
 
 export function removeMemory(memory: Memory, item: string): void {
-memory.items = memory.items.filter((existing) => existing !== item);
+  memory.items = memory.items.filter((existing) => existing !== item);
 }
 
 export async function loadCloudMemory(memory: Memory): Promise<Memory> {
-if (!cloudClient.isLoggedIn) return memory;
+  if (!cloudClient.isLoggedIn) return memory;
 
-try {
-const memories = await cloudClient.listMemories();
-const sharedMemory = memories.find(
-(item) => item.key === CLOUD_MEMORY_KEY,
-);
+  try {
+    const memories = await cloudClient.listMemories();
+    const sharedMemory = memories.find((item) => item.key === CLOUD_MEMORY_KEY);
 
-if (sharedMemory) {
-  const parsed: unknown = JSON.parse(sharedMemory.content);
+    if (sharedMemory) {
+      const parsed: unknown = JSON.parse(sharedMemory.content);
 
-  if (
-    parsed &&
-    typeof parsed === "object" &&
-    "items" in parsed &&
-    Array.isArray(parsed.items)
-  ) {
-    memory.items = parsed.items.filter(
-      (item): item is string => typeof item === "string",
-    );
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "items" in parsed &&
+        Array.isArray(parsed.items)
+      ) {
+        memory.items = parsed.items.filter(
+          (item): item is string => typeof item === "string",
+        );
+      }
+    } else if (memory.items.length > 0) {
+      await saveCloudMemory(memory);
+    }
+  } catch {
+    // Cloud is optional: keep using local memory when unavailable.
   }
-} else if (memory.items.length > 0) {
-  await saveCloudMemory(memory);
-}
 
-
-} catch {
-// Cloud is optional: keep using local memory when unavailable.
-}
-
-return memory;
+  return memory;
 }
 
 export async function saveCloudMemory(memory: Memory): Promise<void> {
-if (!cloudClient.isLoggedIn) return;
+  if (!cloudClient.isLoggedIn) return;
 
-try {
-await cloudClient.saveMemory(
-CLOUD_MEMORY_KEY,
-JSON.stringify({ items: memory.items }),
-);
-} catch {
-// Cloud is optional: preserve local memory when unavailable.
-}
+  try {
+    await cloudClient.saveMemory(
+      CLOUD_MEMORY_KEY,
+      JSON.stringify({ items: memory.items }),
+    );
+  } catch {
+    // Cloud is optional: preserve local memory when unavailable.
+  }
 }
 
 export async function updateMemory(
-memory: Memory,
-messages: Message[],
-provider: BaseProvider,
+  memory: Memory,
+  messages: Message[],
+  provider: BaseProvider,
 ): Promise<Memory> {
-await loadCloudMemory(memory);
+  await loadCloudMemory(memory);
 
-const memoryPrompt = `
+  const memoryPrompt = `
 You manage the long-term memory for an AI coding agent.
 
 Your job is to maintain the existing memory, not replace it unnecessarily.
@@ -105,29 +100,26 @@ Rules:
 {"items":["memory 1","memory 2"]}
 `;
 
-const response = await provider.sendMessage(
-[{ role: "user", content: memoryPrompt }],
-"You are a memory manager. Return only valid JSON.",
-);
+  const response = await provider.sendMessage(
+    [{ role: "user", content: memoryPrompt }],
+    "You are a memory manager. Return only valid JSON.",
+  );
 
-try {
-const parsed = JSON.parse(response.content) as { items?: unknown };
+  try {
+    const parsed = JSON.parse(response.content) as { items?: unknown };
 
+    if (!Array.isArray(parsed.items)) {
+      return memory;
+    }
 
-if (!Array.isArray(parsed.items)) {
-  return memory;
-}
+    memory.items = parsed.items.filter(
+      (item): item is string => typeof item === "string",
+    );
 
-memory.items = parsed.items.filter(
-  (item): item is string => typeof item === "string",
-);
+    await saveCloudMemory(memory);
 
-await saveCloudMemory(memory);
-
-return memory;
-
-
-} catch {
-return memory;
-}
+    return memory;
+  } catch {
+    return memory;
+  }
 }

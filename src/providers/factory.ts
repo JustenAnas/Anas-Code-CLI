@@ -1,4 +1,3 @@
-
 import { ClaudeProvider } from "./claude.js";
 import { OpenAIProvider } from "./openai.js";
 import { OpenRouterProvider } from "./openrouter.js";
@@ -7,11 +6,7 @@ import { GroqProvider } from "./groq.js";
 import type { BaseProvider } from "./base.js";
 
 export type ProviderName =
-  | "claude"
-  | "openai"
-  | "openrouter"
-  | "gemini"
-  | "groq";
+  "claude" | "openai" | "openrouter" | "gemini" | "groq";
 
 export function createProvider(
   name: ProviderName,

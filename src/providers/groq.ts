@@ -1,4 +1,3 @@
-
 import OpenAI from "openai";
 import {
   ProviderError,
@@ -154,7 +153,7 @@ export class GroqProvider implements BaseProvider {
       baseURL: "https://api.groq.com/openai/v1",
     });
 
-   this.model = "openai/gpt-oss-20b";
+    this.model = "openai/gpt-oss-20b";
   }
 
   private buildMessages(messages: Message[], systemPrompt?: string): any[] {
@@ -358,7 +357,7 @@ export class GroqProvider implements BaseProvider {
       }
 
       if (error.status === 400) {
-         console.error("Groq error details:", error.error);
+        console.error("Groq error details:", error.error);
         throw new ProviderError(
           `Groq request error: ${error.message}`,
           400,
@@ -366,7 +365,11 @@ export class GroqProvider implements BaseProvider {
         );
       }
 
-      if (error.status === 500 || error.status === 502 || error.status === 503) {
+      if (
+        error.status === 500 ||
+        error.status === 502 ||
+        error.status === 503
+      ) {
         throw new ProviderError(
           `Groq API error (${error.status}): ${error.message}`,
           error.status,

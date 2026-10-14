@@ -148,8 +148,7 @@ export class ClaudeProvider implements BaseProvider {
 
       if (message.role === "assistant") {
         const toolCalls =
-          message.toolCalls ??
-          (message.toolCall ? [message.toolCall] : []);
+          message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
 
         if (toolCalls.length > 0) {
           const content: any[] = [];
@@ -233,11 +232,7 @@ export class ClaudeProvider implements BaseProvider {
       }
 
       if (status === 429) {
-        throw new ProviderError(
-          "Claude rate limit exceeded.",
-          429,
-          true,
-        );
+        throw new ProviderError("Claude rate limit exceeded.", 429, true);
       }
 
       if (status === 400) {
@@ -306,9 +301,7 @@ export class ClaudeProvider implements BaseProvider {
 
       return {
         content,
-        ...(toolCalls.length > 0
-          ? { toolCall: toolCalls[0], toolCalls }
-          : {}),
+        ...(toolCalls.length > 0 ? { toolCall: toolCalls[0], toolCalls } : {}),
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
       };
@@ -387,9 +380,7 @@ export class ClaudeProvider implements BaseProvider {
 
       return {
         content: fullContent,
-        ...(toolCalls.length > 0
-          ? { toolCall: toolCalls[0], toolCalls }
-          : {}),
+        ...(toolCalls.length > 0 ? { toolCall: toolCalls[0], toolCalls } : {}),
         inputTokens,
         outputTokens,
       };

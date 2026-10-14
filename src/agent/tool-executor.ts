@@ -54,7 +54,9 @@ export async function executeTool(
   if (
     name === "bash" &&
     /^(dir|ls)(\s+\.?)?$/i.test(input.command.trim()) &&
-    /\b(list|listing|show|display)\b.*\b(files|folders|directory|contents)\b|\b(current directory|directory contents)\b/i.test(userPrompt)
+    /\b(list|listing|show|display)\b.*\b(files|folders|directory|contents)\b|\b(current directory|directory contents)\b/i.test(
+      userPrompt,
+    )
   ) {
     return 'Use the list_dir tool instead of bash to list directory contents. Call list_dir with path "." for the current directory.';
   }

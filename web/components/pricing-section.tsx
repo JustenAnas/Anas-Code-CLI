@@ -36,9 +36,7 @@ type RazorpayOptions = {
 
 declare global {
   interface Window {
-    Razorpay?: new (
-      options: RazorpayOptions
-    ) => {
+    Razorpay?: new (options: RazorpayOptions) => {
       open: () => void;
     };
   }
@@ -109,12 +107,12 @@ function loadRazorpay(): Promise<boolean> {
     }
 
     const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
     );
 
     if (existingScript) {
       existingScript.addEventListener("load", () =>
-        resolve(Boolean(window.Razorpay))
+        resolve(Boolean(window.Razorpay)),
       );
       existingScript.addEventListener("error", () => resolve(false));
       return;
@@ -161,12 +159,11 @@ export default function PricingSection() {
       });
 
       const order = (await response.json()) as
-        | RazorpayOrder
-        | { error: string };
+        RazorpayOrder | { error: string };
 
       if (!response.ok || !("orderId" in order)) {
         throw new Error(
-          "error" in order ? order.error : "Could not create order."
+          "error" in order ? order.error : "Could not create order.",
         );
       }
 
@@ -186,7 +183,7 @@ export default function PricingSection() {
         handler: (payment) => {
           setMessage(
             `Payment ID: ${payment.razorpay_payment_id}. ` +
-              "Payment is not yet verified server-side."
+              "Payment is not yet verified server-side.",
           );
         },
         modal: {
@@ -199,7 +196,7 @@ export default function PricingSection() {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setLoadingPlan(null);
@@ -225,32 +222,31 @@ export default function PricingSection() {
           </h2>
 
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-white/70 md:text-xl">
-            Start free, upgrade when you need more power, and keep building
-            with ANAS.
+            Start free, upgrade when you need more power, and keep building with
+            ANAS.
           </p>
         </div>
 
         {/* Currency toggle */}
-<div className="mt-12 flex justify-center">
-  <div className="flex gap-2 rounded-full bg-transparent p-1">
-    {(["USD", "INR"] as const).map((option) => (
-      <button
-        key={option}
-        type="button"
-        onClick={() => setCurrency(option)}
-        aria-pressed={currency === option}
-        className={`rounded-full border px-6 py-3 text-sm font-semibold transition-all duration-200 ${
-          currency === option
-            ? "border-black bg-black text-white"
-            : "border-white bg-white text-black hover:bg-white/90"
-        }`}
-      >
-        {option === "USD" ? "$ USD" : "₹ INR"}
-      </button>
-    ))}
-  </div>
-</div>
-
+        <div className="mt-12 flex justify-center">
+          <div className="flex gap-2 rounded-full bg-transparent p-1">
+            {(["USD", "INR"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setCurrency(option)}
+                aria-pressed={currency === option}
+                className={`rounded-full border px-6 py-3 text-sm font-semibold transition-all duration-200 ${
+                  currency === option
+                    ? "border-black bg-black text-white"
+                    : "border-white bg-white text-black hover:bg-white/90"
+                }`}
+              >
+                {option === "USD" ? "$ USD" : "₹ INR"}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => (
@@ -324,9 +320,7 @@ export default function PricingSection() {
                 onClick={() => void handleCheckout(plan)}
                 disabled={loadingPlan !== null}
                 className={`mt-auto w-full rounded-full px-5 py-3 text-sm font-semibold transition-all duration-300 hover:scale-[1.03] disabled:cursor-wait disabled:opacity-60 ${
-                  plan.featured
-                    ? "bg-white text-black"
-                    : "bg-black text-white"
+                  plan.featured ? "bg-white text-black" : "bg-black text-white"
                 }`}
               >
                 {loadingPlan === plan.name
@@ -354,4 +348,3 @@ export default function PricingSection() {
     </section>
   );
 }
-

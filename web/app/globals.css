@@ -188,7 +188,6 @@
   animation: reviews-reverse 35s linear infinite;
 }
 
-
 /* ANAS CLI — Introduction page */
 .anas-intro {
   --anas-bg: #171717;
@@ -266,7 +265,9 @@
   font-size: 0.9rem;
   font-weight: 550;
   text-decoration: none;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .anas-actions a:first-child {
@@ -346,7 +347,9 @@
   border: 1px solid var(--anas-border);
   border-radius: 0.75rem;
   background: var(--anas-panel);
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .anas-mode-card:hover {
@@ -501,8 +504,11 @@
   outline-offset: 3px;
 }
 .anas-actions .anas-primary-action {
-  transition: background 180ms ease, border-color 180ms ease,
-    transform 180ms ease, box-shadow 180ms ease;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .anas-actions .anas-primary-action:hover {

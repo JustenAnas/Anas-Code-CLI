@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -17,11 +16,7 @@ export default function TerminalCopyButton() {
   }
 
   return (
-    <button
-      className="anas-terminal-copy"
-      type="button"
-      onClick={handleCopy}
-    >
+    <button className="anas-terminal-copy" type="button" onClick={handleCopy}>
       {copied ? "Copied!" : "Copy"}
     </button>
   );

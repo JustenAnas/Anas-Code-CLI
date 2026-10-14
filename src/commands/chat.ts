@@ -1,8 +1,13 @@
 
 import { input, confirm, select } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
+import ora from "ora";
+import chalk from "chalk";
 import type { CliMode } from "../agent/modes.js";
-import { createProvider, type ProviderName } from "../providers/factory.js";
+import {
+  createProvider,
+  type ProviderName,
+} from "../providers/factory.js";
 import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
@@ -12,7 +17,12 @@ import { SessionStore } from "../agent/session-store.js";
 import { resolveFileReferences } from "../agent/file-references.js";
 import { cloudClient } from "../cloud/client.js";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -52,7 +62,9 @@ async function pasteFromEditor(): Promise<string | null> {
   }
 }
 
-export async function startChat(options: ChatOptions = {}): Promise<void> {
+export async function startChat(
+  options: ChatOptions = {},
+): Promise<void> {
   let {
     mode = "agent",
     verbose = false,
@@ -68,9 +80,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
   async function syncConversation(): Promise<void> {
     if (!cloudClient.isLoggedIn) {
-      console.error(
-        "[Cloud Sync] Not logged in; skipping conversation sync.",
-      );
       return;
     }
 
@@ -82,7 +91,8 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       await cloudClient.saveSession({
         localSessionId: session.id,
         title:
-          firstUserMessage?.content.slice(0, 80) || "ANAS CLI session",
+          firstUserMessage?.content.slice(0, 80) ||
+          "ANAS CLI session",
         workingDirectory: process.cwd(),
       });
 
@@ -98,10 +108,6 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
           toolCalls: message.toolCalls,
         });
       }
-
-      console.log(
-        `[Cloud Sync] Synced ${session.messages.length} messages successfully.`,
-      );
     } catch (error) {
       console.error(
         "[Cloud Sync] Failed:",
@@ -113,27 +119,32 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
   console.log(
     fmt.mode(
       `Chat started · provider: ${provider.name} · mode: ${mode}` +
-        (model ? ` · model: ${model}` : ""),
+      (model ? ` · model: ${model}` : ""),
     ),
   );
-  console.log(fmt.dim("Type /help for commands, /exit to quit.\n"));
+  console.log(
+    fmt.dim("Type /help for commands, /exit to quit.\n"),
+  );
 
   let running = true;
 
   while (running) {
-    const line = await input({ message: fmt.label("You:") });
-let trimmed = line.trim();
+    const line = await input({
+      message: fmt.label("You:"),
+    });
 
-if (trimmed === "/paste") {
-  const pastedText = await pasteFromEditor();
+    let trimmed = line.trim();
 
-  if (!pastedText) {
-    console.log(fmt.dim("No text entered.\n"));
-    continue;
-  }
+    if (trimmed === "/paste") {
+      const pastedText = await pasteFromEditor();
 
-  trimmed = pastedText.trim();
-}
+      if (!pastedText) {
+        console.log(fmt.dim("No text entered.\n"));
+        continue;
+      }
+
+      trimmed = pastedText.trim();
+    }
 
     if (!trimmed) continue;
 
@@ -174,7 +185,9 @@ if (trimmed === "/paste") {
     if (command.type === "resume") {
       const localSessions = sessionStore
         .getAll()
-        .filter((storedSession) => storedSession.id !== session.id);
+        .filter(
+          (storedSession) => storedSession.id !== session.id,
+        );
 
       let cloudSessions: Awaited<
         ReturnType<typeof cloudClient.listSessions>
@@ -186,8 +199,7 @@ if (trimmed === "/paste") {
         } catch (error) {
           console.error(
             fmt.error(
-              `Could not load cloud sessions: ${
-                error instanceof Error ? error.message : error
+              `Could not load cloud sessions: ${error instanceof Error ? error.message : error
               }`,
             ),
           );
@@ -239,7 +251,8 @@ if (trimmed === "/paste") {
 
         try {
           const cloudSession = availableCloudSessions.find(
-            (item) => item.localSessionId === localSessionId,
+            (item) =>
+              item.localSessionId === localSessionId,
           );
 
           if (!cloudSession) {
@@ -259,8 +272,12 @@ if (trimmed === "/paste") {
               ...(message.toolCallId
                 ? { toolCallId: message.toolCallId }
                 : {}),
-              ...(message.toolCall ? { toolCall: message.toolCall } : {}),
-              ...(message.toolCalls ? { toolCalls: message.toolCalls } : {}),
+              ...(message.toolCall
+                ? { toolCall: message.toolCall }
+                : {}),
+              ...(message.toolCalls
+                ? { toolCalls: message.toolCalls }
+                : {}),
             }));
 
           session = sessionStore.restore(
@@ -272,8 +289,7 @@ if (trimmed === "/paste") {
         } catch (error) {
           console.error(
             fmt.error(
-              `Could not resume cloud session: ${
-                error instanceof Error ? error.message : error
+              `Could not resume cloud session: ${error instanceof Error ? error.message : error
               }`,
             ),
           );
@@ -282,7 +298,9 @@ if (trimmed === "/paste") {
       }
 
       console.log(
-        fmt.mode(`\nSession resumed · ${session.messages.length} messages.\n`),
+        fmt.mode(
+          `\nSession resumed · ${session.messages.length} messages.\n`,
+        ),
       );
       continue;
     }
@@ -298,11 +316,21 @@ if (trimmed === "/paste") {
       continue;
     }
 
+    let spinner: ReturnType<typeof ora> | undefined;
+
     try {
       addMessage(session, {
         role: "user",
         content: enrichedPrompt,
       });
+
+      spinner = ora({
+        text: chalk.cyan("Assistant is thinking…"),
+        spinner: {
+          interval: 250,
+          frames: ["◉", "◎", "◌", "◎"],
+        },
+      }).start();
 
       let firstChunk = true;
 
@@ -314,17 +342,54 @@ if (trimmed === "/paste") {
           if (mode === "plan") return;
 
           if (firstChunk) {
-            process.stdout.write(fmt.assistant("Assistant: "));
+            spinner?.stop();
+            process.stdout.write(
+              fmt.assistant("Assistant: "),
+            );
             firstChunk = false;
           }
 
           process.stdout.write(chunk);
         },
-        (status) => console.log(`\n[DEBUG] ${status}`),
+        (status) => {
+          if (status.startsWith("[Using tool: ")) {
+            const tool = status
+              .replace("[Using tool: ", "")
+              .replace("]", "");
+
+            if (firstChunk) {
+              spinner?.start(
+                chalk.cyan(`Executing ${tool}…`),
+              );
+            }
+          } else if (status.startsWith("[Retry ")) {
+            if (firstChunk) {
+              spinner?.start(
+                chalk.yellow("Retrying request…"),
+              );
+            }
+          }
+
+          if (verbose) {
+            console.log(`\n[DEBUG] ${status}`);
+          }
+        },
         context,
         verbose,
         mode,
+        undefined,
+        (inputTokens, outputTokens, cost) => {
+          if (!verbose) return;
+
+          process.stdout.write(
+            chalk.gray(
+              `\n── Usage: ${inputTokens} in · ${outputTokens} out · $${cost.toFixed(6)} ──\n`,
+            ),
+          );
+        },
       );
+
+      spinner?.stop();
 
       if (mode === "plan" && plan) {
         printPlan(plan);
@@ -340,7 +405,9 @@ if (trimmed === "/paste") {
 
           const executionPrompt = `Execute this plan step by step:
 
-${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
+${plan.steps
+              .map((step, index) => `${index + 1}. ${step}`)
+              .join("\n")}`;
 
           let executionFirstChunk = true;
 
@@ -355,13 +422,19 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
             session,
             (chunk) => {
               if (executionFirstChunk) {
-                process.stdout.write(fmt.assistant("Assistant: "));
+                process.stdout.write(
+                  fmt.assistant("Assistant: "),
+                );
                 executionFirstChunk = false;
               }
 
               process.stdout.write(chunk);
             },
-            (status) => console.log(`\n[DEBUG] ${status}`),
+            (status) => {
+              if (verbose) {
+                console.log(`\n[DEBUG] ${status}`);
+              }
+            },
             context,
             verbose,
             mode,
@@ -373,11 +446,16 @@ ${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
       console.log();
     } catch (error) {
+      spinner?.stop();
+
       console.error(
-        fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
+        fmt.error(
+          `Error: ${error instanceof Error ? error.message : error
+          }`,
+        ),
       );
     } finally {
-      await syncConversation();
+      void syncConversation();
     }
   }
 

@@ -9,16 +9,16 @@ ANAS CLI uses tools to inspect project files, make changes, execute terminal com
 
 ## Available tools
 
-| Tool | Purpose |
-| --- | --- |
-| `read_file` | Read a file. |
-| `write_file` | Create or overwrite a file. |
-| `edit_file` | Replace exact text in a file. |
-| `bash` | Run a terminal command. |
-| `glob` | Find files using a glob pattern. |
-| `list_dir` | List directory contents. |
-| `search_code` | Search project file contents. |
-| `git` | Inspect repository status, diffs, logs, and branches. |
+| Tool          | Purpose                                               |
+| ------------- | ----------------------------------------------------- |
+| `read_file`   | Read a file.                                          |
+| `write_file`  | Create or overwrite a file.                           |
+| `edit_file`   | Replace exact text in a file.                         |
+| `bash`        | Run a terminal command.                               |
+| `glob`        | Find files using a glob pattern.                      |
+| `list_dir`    | List directory contents.                              |
+| `search_code` | Search project file contents.                         |
+| `git`         | Inspect repository status, diffs, logs, and branches. |
 
 ## Tool access by mode
 
@@ -51,11 +51,11 @@ It cannot invoke the registered tools through the current implementation.
 
 ANAS requests confirmation before executing these operations:
 
-| Tool | Why confirmation is required |
-| --- | --- |
-| `bash` | A terminal command will be executed. |
-| `write_file` | A file may be created or overwritten. |
-| `edit_file` | Existing file contents may be changed. |
+| Tool         | Why confirmation is required           |
+| ------------ | -------------------------------------- |
+| `bash`       | A terminal command will be executed.   |
+| `write_file` | A file may be created or overwritten.  |
+| `edit_file`  | Existing file contents may be changed. |
 
 The permission prompt displays the operation details and asks whether to allow it.
 

@@ -122,10 +122,12 @@ export async function currentCliUser(token: string) {
     return null;
   }
 
-  return db.collection("users").findOne(
-    { _id: new ObjectId(cliToken.userId) },
-    { projection: { passwordHash: 0 } },
-  );
+  return db
+    .collection("users")
+    .findOne(
+      { _id: new ObjectId(cliToken.userId) },
+      { projection: { passwordHash: 0 } },
+    );
 }
 
 export async function revokeCliToken(token: string) {
@@ -136,4 +138,3 @@ export async function revokeCliToken(token: string) {
     tokenHash: sha256(token),
   });
 }
-

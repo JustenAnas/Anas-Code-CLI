@@ -35,19 +35,14 @@ export class CloudClient {
   }
 
   private get apiUrl(): string {
-    return (
-      process.env.ANAS_CLOUD_URL || DEFAULT_API_URL
-    ).replace(/\/+$/, "");
+    return (process.env.ANAS_CLOUD_URL || DEFAULT_API_URL).replace(/\/+$/, "");
   }
 
   get isLoggedIn(): boolean {
     return Boolean(this.token);
   }
 
-  async request<T>(
-    path: string,
-    options: RequestInit = {},
-  ): Promise<T> {
+  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.token;
 
     if (!token) {
@@ -77,9 +72,9 @@ export class CloudClient {
       throw new Error("Your ANAS Cloud login expired. Run: anas-cli login");
     }
 
-    const result = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
+    const result = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
 
     if (!response.ok) {
       throw new Error(
@@ -173,4 +168,3 @@ export class CloudClient {
 }
 
 export const cloudClient = new CloudClient();
-

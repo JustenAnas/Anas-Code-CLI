@@ -96,7 +96,7 @@ export function createCli() {
       await runQuery(prompt, { verbose: opts.verbose });
     });
 
-      program
+  program
     .command("login")
     .description("Log in to ANAS Cloud")
     .action(async () => {

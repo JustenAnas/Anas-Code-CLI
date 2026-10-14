@@ -10,6 +10,6 @@ export function printBanner() {
     { padding: 1, borderColor: "cyan" },
   );
 
-  console.log(title);
+  console.log(chalk.magentaBright(title));
   console.log(panel);
 }

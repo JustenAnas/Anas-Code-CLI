@@ -74,4 +74,3 @@ export class SessionStore {
     return deleted;
   }
 }
-

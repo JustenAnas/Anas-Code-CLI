@@ -1,4 +1,3 @@
-
 import chalk from "chalk";
 import "dotenv/config";
 import { execa } from "execa";

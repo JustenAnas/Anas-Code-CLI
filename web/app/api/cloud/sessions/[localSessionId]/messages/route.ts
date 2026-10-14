@@ -38,7 +38,9 @@ function isValidToolCalls(value: unknown): boolean {
   );
 }
 
-function toJsonInput(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+function toJsonInput(
+  value: unknown,
+): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (value === undefined || value === null) {
     return Prisma.JsonNull;
   }
@@ -197,8 +199,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const metadata = {
-      toolCallId:
-        typeof toolCallId === "string" ? toolCallId : null,
+      toolCallId: typeof toolCallId === "string" ? toolCallId : null,
       toolCall: toJsonInput(toolCall),
       toolCalls: toJsonInput(toolCalls),
     };
@@ -248,4 +249,3 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 }
-

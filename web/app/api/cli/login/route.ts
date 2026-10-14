@@ -1,15 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import {
-  createCliToken,
-  normalizeEmail,
-  verifyPassword,
-} from "@/lib/auth";
+import { createCliToken, normalizeEmail, verifyPassword } from "@/lib/auth";
 import { badRequest, json, loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const parsed = loginSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const parsed = loginSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
     return badRequest("Email and password are required");
@@ -39,4 +33,3 @@ export async function POST(request: Request) {
     },
   });
 }
-

@@ -22,7 +22,7 @@ export default function NotFound1({
     <div
       className={cn(
         "retro grid min-h-screen w-full place-content-center gap-5 bg-background px-4 py-16 text-center md:py-24",
-        className
+        className,
       )}
     >
       <div className="retro text-6xl font-bold tracking-tight sm:text-8xl">
@@ -45,9 +45,7 @@ export default function NotFound1({
         {title}
       </h1>
 
-      <p className="retro text-xs text-muted-foreground">
-        {description}
-      </p>
+      <p className="retro text-xs text-muted-foreground">{description}</p>
 
       <div className="flex justify-center">
         <a href={href}>

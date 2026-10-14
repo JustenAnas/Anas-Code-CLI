@@ -1,4 +1,3 @@
-
 import {
   GoogleGenerativeAI,
   SchemaType,
@@ -22,7 +21,10 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: { type: SchemaType.STRING, description: "The file path to read" },
+            path: {
+              type: SchemaType.STRING,
+              description: "The file path to read",
+            },
           },
           required: ["path"],
         },
@@ -33,8 +35,14 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: { type: SchemaType.STRING, description: "The file path to write" },
-            content: { type: SchemaType.STRING, description: "The content to write" },
+            path: {
+              type: SchemaType.STRING,
+              description: "The file path to write",
+            },
+            content: {
+              type: SchemaType.STRING,
+              description: "The content to write",
+            },
           },
           required: ["path", "content"],
         },
@@ -45,7 +53,10 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            command: { type: SchemaType.STRING, description: "The command to run" },
+            command: {
+              type: SchemaType.STRING,
+              description: "The command to run",
+            },
           },
           required: ["command"],
         },
@@ -56,7 +67,10 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            pattern: { type: SchemaType.STRING, description: "The file pattern to search for" },
+            pattern: {
+              type: SchemaType.STRING,
+              description: "The file pattern to search for",
+            },
           },
           required: ["pattern"],
         },
@@ -67,7 +81,10 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: { type: SchemaType.STRING, description: "The directory path to list" },
+            path: {
+              type: SchemaType.STRING,
+              description: "The directory path to list",
+            },
           },
           required: ["path"],
         },
@@ -78,9 +95,18 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            path: { type: SchemaType.STRING, description: "The file path to edit" },
-            oldStr: { type: SchemaType.STRING, description: "Exact text to replace" },
-            newStr: { type: SchemaType.STRING, description: "Replacement text" },
+            path: {
+              type: SchemaType.STRING,
+              description: "The file path to edit",
+            },
+            oldStr: {
+              type: SchemaType.STRING,
+              description: "Exact text to replace",
+            },
+            newStr: {
+              type: SchemaType.STRING,
+              description: "Replacement text",
+            },
           },
           required: ["path", "oldStr", "newStr"],
         },
@@ -93,7 +119,7 @@ const TOOLS: Tool[] = [
           properties: {
             action: {
               type: SchemaType.STRING,
-               format: "enum",
+              format: "enum",
               enum: ["status", "diff", "log", "branch"],
               description: "The Git action to perform",
             },
@@ -108,7 +134,10 @@ const TOOLS: Tool[] = [
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
-            query: { type: SchemaType.STRING, description: "Text to search for inside project files" },
+            query: {
+              type: SchemaType.STRING,
+              description: "Text to search for inside project files",
+            },
           },
           required: ["query"],
         },
@@ -144,8 +173,7 @@ export class GeminiProvider implements BaseProvider {
 
       if (message.role === "assistant") {
         const calls =
-          message.toolCalls ??
-          (message.toolCall ? [message.toolCall] : []);
+          message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
 
         if (calls.length > 0) {
           history.push({
@@ -198,12 +226,9 @@ export class GeminiProvider implements BaseProvider {
       if (previous.role !== "assistant") continue;
 
       const calls =
-        previous.toolCalls ??
-        (previous.toolCall ? [previous.toolCall] : []);
+        previous.toolCalls ?? (previous.toolCall ? [previous.toolCall] : []);
 
-      const matching = calls.find(
-        (call) => call.id === toolMessage.toolCallId,
-      );
+      const matching = calls.find((call) => call.id === toolMessage.toolCallId);
 
       if (matching) return matching.name;
 
@@ -223,11 +248,17 @@ export class GeminiProvider implements BaseProvider {
 
   private handleError(error: unknown): never {
     const message = error instanceof Error ? error.message : String(error);
-    const statusMatch = message.match(/\b(400|401|403|404|408|429|500|502|503|504)\b/);
+    const statusMatch = message.match(
+      /\b(400|401|403|404|408|429|500|502|503|504)\b/,
+    );
     const status = statusMatch ? Number(statusMatch[1]) : undefined;
 
     if (status === 401 || status === 403) {
-      throw new ProviderError("Invalid Gemini API key or API access denied.", status, false);
+      throw new ProviderError(
+        "Invalid Gemini API key or API access denied.",
+        status,
+        false,
+      );
     }
 
     if (status === 429) {
@@ -239,7 +270,11 @@ export class GeminiProvider implements BaseProvider {
     }
 
     if (status && status >= 500) {
-      throw new ProviderError(`Gemini API error (${status}): ${message}`, status, true);
+      throw new ProviderError(
+        `Gemini API error (${status}): ${message}`,
+        status,
+        true,
+      );
     }
 
     throw new ProviderError(
@@ -275,9 +310,7 @@ export class GeminiProvider implements BaseProvider {
 
       return {
         content: response.text(),
-        ...(toolCalls.length
-          ? { toolCall: toolCalls[0], toolCalls }
-          : {}),
+        ...(toolCalls.length ? { toolCall: toolCalls[0], toolCalls } : {}),
         inputTokens: response.usageMetadata?.promptTokenCount,
         outputTokens: response.usageMetadata?.candidatesTokenCount,
       };
@@ -329,9 +362,7 @@ export class GeminiProvider implements BaseProvider {
 
       return {
         content: fullContent,
-        ...(toolCalls.length
-          ? { toolCall: toolCalls[0], toolCalls }
-          : {}),
+        ...(toolCalls.length ? { toolCall: toolCalls[0], toolCalls } : {}),
         inputTokens: response.usageMetadata?.promptTokenCount,
         outputTokens: response.usageMetadata?.candidatesTokenCount,
       };

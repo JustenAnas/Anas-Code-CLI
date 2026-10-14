@@ -36,14 +36,14 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "Invalid plan. Choose Free, Builder, Pro, or Scale." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (currency !== "USD" && currency !== "INR") {
       return NextResponse.json(
         { error: "Invalid currency. Choose USD or INR." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     if (!keyId || !keySecret) {
       return NextResponse.json(
         { error: "Razorpay API keys are not configured." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -89,8 +89,7 @@ export async function POST(request: Request) {
             ? error.message
             : "Failed to create Razorpay order.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

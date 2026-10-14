@@ -153,4 +153,3 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
 
   await startChat({ mode, provider, model, verbose });
 }
-

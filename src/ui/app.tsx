@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import React, { useEffect, useRef, useState } from "react";
 import { loadCloudMemory } from "../agent/memory.js";
@@ -25,19 +24,12 @@ type PermissionRequest = {
   resolve: (result: PermissionResult) => void;
 };
 
-const PROVIDERS: ProviderName[] = [
-  "openrouter",
-  "openai",
-  "gemini",
-  "claude",
-];
+const PROVIDERS: ProviderName[] = ["openrouter", "openai", "gemini", "claude"];
 
 const MODES: CliMode[] = ["agent", "ask", "plan"];
 
 function formatPrice(price: number): string {
-  return price === 0
-    ? "Free"
-    : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
+  return price === 0 ? "Free" : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
 }
 
 function App() {
@@ -54,9 +46,9 @@ function App() {
     cost: number;
   } | null>(null);
 
-  const [openRouterModels, setOpenRouterModels] = useState<
-    OpenRouterModel[]
-  >([]);
+  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
+    [],
+  );
   const [openRouterModelId, setOpenRouterModelId] = useState<string | null>(
     null,
   );
@@ -218,9 +210,7 @@ function App() {
 
   async function syncConversation(): Promise<void> {
     if (!cloudClient.isLoggedIn) {
-      console.error(
-        "[Cloud Sync] Not logged in; skipping conversation sync.",
-      );
+      console.error("[Cloud Sync] Not logged in; skipping conversation sync.");
       return;
     }
 
@@ -434,7 +424,8 @@ function App() {
                     </Text>
 
                     <Text dimColor>
-                      {"    "}{model.id}
+                      {"    "}
+                      {model.id}
                     </Text>
                   </Box>
                 ))}

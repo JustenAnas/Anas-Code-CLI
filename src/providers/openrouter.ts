@@ -1,4 +1,3 @@
-
 import OpenAI from "openai";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type {
@@ -100,7 +99,6 @@ const TOOLS: ChatCompletionTool[] = [
   },
 ];
 
-
 export type OpenRouterModel = {
   id: string;
   name: string;
@@ -164,8 +162,7 @@ export async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
     })
     .sort(
       (a, b) =>
-        Number(b.isFree) - Number(a.isFree) ||
-        a.name.localeCompare(b.name),
+        Number(b.isFree) - Number(a.isFree) || a.name.localeCompare(b.name),
     );
 }
 
@@ -201,8 +198,7 @@ export class OpenRouterProvider implements BaseProvider {
       if (message.role === "assistant") {
         // Support both singular and plural tool-call history.
         const toolCalls =
-          message.toolCalls ??
-          (message.toolCall ? [message.toolCall] : []);
+          message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
 
         if (toolCalls.length > 0) {
           return {
@@ -290,9 +286,17 @@ export class OpenRouterProvider implements BaseProvider {
       tools: TOOLS,
       parallel_tool_calls: false,
       stream: true,
+      stream_options: { include_usage: true },
     });
 
+    let inputTokens: number | undefined;
+    let outputTokens: number | undefined;
+
     for await (const chunk of stream) {
+      if (chunk.usage) {
+        inputTokens = chunk.usage.prompt_tokens;
+        outputTokens = chunk.usage.completion_tokens;
+      }
       const delta = chunk.choices[0]?.delta;
 
       // Native structured tool call.
@@ -400,11 +404,12 @@ export class OpenRouterProvider implements BaseProvider {
         };
       } catch {}
     }
-    
 
     return {
       content: fullContent,
       toolCall,
+      inputTokens,
+      outputTokens,
     };
   }
 }
