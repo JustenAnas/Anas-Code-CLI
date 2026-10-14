@@ -11,6 +11,10 @@ import { addMessage } from "../agent/session.js";
 import { SessionStore } from "../agent/session-store.js";
 import { resolveFileReferences } from "../agent/file-references.js";
 import { cloudClient } from "../cloud/client.js";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 export type ChatOptions = {
   mode?: CliMode;
@@ -28,6 +32,24 @@ function printPlan(plan: Plan): void {
   });
 
   console.log(fmt.dim("────────────────────────\n"));
+}
+
+async function pasteFromEditor(): Promise<string | null> {
+  const tempDir = mkdtempSync(join(tmpdir(), "anas-cli-"));
+  const filePath = join(tempDir, "prompt.txt");
+
+  try {
+    writeFileSync(filePath, "", "utf8");
+
+    execFileSync("notepad.exe", [filePath], {
+      stdio: "inherit",
+    });
+
+    const content = readFileSync(filePath, "utf8");
+    return content.trim() ? content : null;
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 export async function startChat(options: ChatOptions = {}): Promise<void> {
@@ -100,7 +122,18 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
 
   while (running) {
     const line = await input({ message: fmt.label("You:") });
-    const trimmed = line.trim();
+let trimmed = line.trim();
+
+if (trimmed === "/paste") {
+  const pastedText = await pasteFromEditor();
+
+  if (!pastedText) {
+    console.log(fmt.dim("No text entered.\n"));
+    continue;
+  }
+
+  trimmed = pastedText.trim();
+}
 
     if (!trimmed) continue;
 

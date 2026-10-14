@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, usePaste } from "ink";
 
 type InputProps = {
   onSubmit: (value: string) => void;
@@ -17,7 +17,13 @@ export function Input({ onSubmit }: InputProps) {
     return () => clearInterval(timer);
   }, []);
 
+  usePaste((pastedText) => {
+  console.log("[PASTE DEBUG]", JSON.stringify(pastedText));
+  setValue((current) => current + pastedText);
+});
+
   useInput((input, key) => {
+    console.log("[INPUT DEBUG]", { input, key });
     if (key.return) {
       if (!value.trim()) return;
 
