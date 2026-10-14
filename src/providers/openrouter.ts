@@ -400,6 +400,7 @@ export class OpenRouterProvider implements BaseProvider {
         };
       } catch {}
     }
+    
 
     return {
       content: fullContent,

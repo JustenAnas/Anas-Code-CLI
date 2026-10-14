@@ -50,6 +50,15 @@ export async function executeTool(
     }
   }
 
+  // Prefer list_dir over bash for directory listings.
+  if (
+    name === "bash" &&
+    /^(dir|ls)(\s+\.?)?$/i.test(input.command.trim()) &&
+    /\b(list|listing|show|display)\b.*\b(files|folders|directory|contents)\b|\b(current directory|directory contents)\b/i.test(userPrompt)
+  ) {
+    return 'Use the list_dir tool instead of bash to list directory contents. Call list_dir with path "." for the current directory.';
+  }
+
   const permission = await permissionHandler(name, input);
 
   if (permission.behavior === "deny") {
