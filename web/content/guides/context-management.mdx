@@ -1,0 +1,100 @@
+---
+title: Context Management
+description: Learn how ANAS CLI builds project context, attaches referenced files, and summarizes older conversation history.
+---
+
+# Context Management
+
+ANAS CLI uses project structure, conversation history, and optional file references to give the AI relevant information while working on your codebase.
+
+## Project context
+
+When an interactive chat starts, ANAS CLI scans the current working directory and builds a text representation of the project structure.
+
+The scan:
+
+- Lists files and directories.
+- Traverses directories up to a limited depth.
+- Ignores `node_modules`, `.git`, `dist`, `.next`, `build`, and `.anas-cli`.
+- Returns an empty context if scanning fails.
+
+The project structure is provided as context to the agent. **This is a directory listing, not the contents of every project file.**
+
+## Reference files with `@`
+
+You can attach file contents to your prompt by including a file path prefixed with `@`.
+
+For example:
+
+```text
+Explain the authentication flow in @src/auth.ts
+```
+
+You can reference multiple files:
+
+```text
+Compare @src/auth.ts and @src/middleware.ts
+```
+
+ANAS CLI attempts to read each referenced file and append its contents to the prompt.
+
+### How file references work
+
+1. ANAS CLI detects file references beginning with `@`.
+2. It attempts to read each referenced file using the file-reading tool.
+3. Successfully read files are appended to the prompt as attachments.
+4. If a file cannot be read, that reference is skipped.
+5. Duplicate references to the same path are included only once.
+
+File references are resolved before the chat command is handled. Use valid paths that the file-reading tool can access.
+
+### File reference limitations
+
+* The current parser treats whitespace and several quote characters as reference boundaries.
+* Paths containing spaces may not be interpreted as a single reference.
+* Unreadable or invalid references are skipped rather than attached.
+* Referenced file contents increase the amount of text sent to the model.
+
+For large files, consider referencing only the files relevant to your task.
+
+## Conversation history and compaction
+
+As a conversation grows, ANAS CLI can summarize older messages to reduce the amount of history retained in the active context.
+
+The current compaction implementation checks the conversation history length.
+
+* Histories containing 20 messages or fewer are left unchanged.
+* When history exceeds 20 messages, older messages are selected for summarization.
+* The newest 10 messages are retained, subject to adjustments that protect assistant tool calls and their corresponding tool results.
+* The older portion is sent to the selected provider with instructions to summarize important context.
+* The resulting summary replaces the older messages in the history supplied to the agent.
+
+The summary is intended to preserve important requests, preferences, decisions, project details, completed work, pending work, tool results, and relevant technical information.
+
+### If summarization fails
+
+If the provider request fails or returns an empty summary, ANAS CLI keeps the original history.
+
+Compaction is a summarization step, not a guarantee that every detail from older messages will be preserved.
+
+## What context management does not do
+
+The current implementation does not automatically read every file in your project. Project scanning provides a directory listing, while file references explicitly attach selected file contents.
+
+Likewise, conversation compaction summarizes older messages; it does not guarantee perfect recall of the original conversation.
+
+## Tips for better results
+
+* Reference relevant files directly with `@path/to/file`.
+* Use paths that are valid from your current working directory.
+* Keep prompts focused when attaching large files.
+* Restate critical constraints if they are essential to a task.
+* Check the agent's summary and results when continuing a long conversation.
+
+## Related documentation
+
+* [Quickstart](/docs/getting-started/quickstart) — start your first chat.
+* [Tools & Permissions](/docs/reference/tools) — understand file-reading and other tools.
+* [Sessions & Conversation History](/docs/guides/sessions) — learn how sessions work.
+* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+* [AI Providers](/docs/configuration/providers) — configure provider credentials.

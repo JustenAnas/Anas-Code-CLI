@@ -1,11 +1,11 @@
 ---
 title: Ask, Agent, and Plan Modes
-description: Learn how to select and use the three ANAS CLI interaction modes.
+description: Learn how to select, switch, and use ANAS CLI interaction modes.
 ---
 
 # Ask, Agent, and Plan Modes
 
-ANAS CLI provides three interaction modes: **Ask**, **Agent**, and **Plan**. Each mode represents a different way to approach coding tasks.
+ANAS CLI provides three interaction modes: **Ask**, **Agent**, and **Plan**. Each mode supports a different approach to coding tasks.
 
 ## Select a mode
 
@@ -27,15 +27,22 @@ The default mode is `agent`.
 
 ## Ask mode
 
-Use Ask mode to explore your codebase, understand existing code, and discuss implementation ideas.
+Use Ask mode to explore your codebase, understand existing code, and discuss implementation ideas without making changes.
 
 **Example prompts**
 
-- Explain how this function works.
-- What does this error mean?
-- How could this module be simplified?
+* Explain how this function works.
+* What does this error mean?
+* How could this module be simplified?
 
-Ask mode is best suited to investigation and understanding before making changes.
+Ask mode provides read-only access to these tools:
+
+* `read_file`
+* `search_code`
+* `glob`
+* `list_dir`
+
+File-writing, editing, terminal, and Git tools are not available through Ask mode's tool allowlist.
 
 ## Agent mode
 
@@ -43,9 +50,22 @@ Use Agent mode when you want assistance carrying out a coding task.
 
 **Example prompts**
 
-- Help me implement input validation.
-- Find where this function is called.
-- Help me fix this failing test.
+* Help me implement input validation.
+* Find where this function is called.
+* Help me fix this failing test.
+
+Agent mode can access all eight registered tools:
+
+* `read_file`
+* `write_file`
+* `edit_file`
+* `bash`
+* `glob`
+* `list_dir`
+* `search_code`
+* `git`
+
+Access is subject to permission checks and safety guardrails. ANAS CLI requests confirmation before executing terminal commands or file-writing and editing operations.
 
 Review generated changes and command results before relying on them.
 
@@ -55,19 +75,49 @@ Use Plan mode to explore an implementation approach before proceeding with a cod
 
 **Example prompts**
 
-- Outline the steps to add authentication.
-- Identify which modules need to change for this feature.
-- Propose an approach for handling API errors.
+* Outline the steps to add authentication.
+* Identify which modules need to change for this feature.
+* Propose an approach for handling API errors.
 
-Planning helps you understand the scope of a change before committing to an implementation.
+Plan mode currently has no tools enabled through its tool allowlist. Use it to discuss and develop an implementation approach before switching to Agent mode to carry out changes.
+
+## Switch modes during a session
+
+You can change the interaction mode without starting a new CLI process by entering a slash command in the interactive chat.
+
+Switch to Ask mode:
+
+```text
+/mode ask
+```
+
+Switch to Agent mode:
+
+```text
+/mode agent
+```
+
+Switch to Plan mode:
+
+```text
+/mode plan
+```
+
+To view the available slash commands, enter:
+
+```text
+/help
+```
 
 ## Implementation notes
 
-Mode names are accepted by the CLI, but their specific behavior depends on the interactive chat implementation.
+The one-shot `talk` command sends a prompt directly to the agent and does not currently accept a `--mode` option.
 
-The one-shot `talk` command sends a prompt directly to the selected provider and does not currently accept a `--mode` option.
+Tool access and permissions differ by mode. Agent mode has broader tool access, but operations can still be blocked by permission checks or safety guardrails.
 
 ## What's next?
 
-- [Quickstart](/docs/getting-started/quickstart) — launch an interactive session.
-- [AI Providers](/docs/configuration/providers) — configure your preferred provider.
+* [Quickstart](/docs/getting-started/quickstart) — launch an interactive session.
+* [AI Providers](/docs/guides/ai-providers) — configure your preferred provider.
+* [Tools & Permissions](/docs/guides/tools-and-permissions) — understand tool access and safety restrictions.
+* [CLI Commands](/docs/reference/commands) — explore available commands and options.

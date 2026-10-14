@@ -15,11 +15,13 @@ Start the guided setup flow, including provider and mode selection.
 npm run dev -- wakeup
 ```
 
-Show token usage and cost when supported:
+Show token usage and estimated cost when supported:
 
 ```bash
 npm run dev -- wakeup --verbose
 ```
+
+The guided flow lets you select a provider and interaction mode. When OpenRouter is selected, ANAS CLI offers a model picker for supported text models with tool-calling capabilities.
 
 ## `chat`
 
@@ -39,10 +41,10 @@ npm run dev -- chat --mode agent
 
 ### Options
 
-| Option              | Description                       |
-| ------------------- | --------------------------------- |
-| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`. |
-| `-v, --verbose`     | Show token usage and cost.        |
+| Option              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`.                   |
+| `-v, --verbose`     | Show token usage and estimated cost when supported. |
 
 ## `talk`
 
@@ -54,23 +56,45 @@ npm run dev -- talk "Explain this project's structure"
 
 ### Options
 
-| Option          | Description                |
-| --------------- | -------------------------- |
-| `-v, --verbose` | Show token usage and cost. |
+| Option          | Description                                         |
+| --------------- | --------------------------------------------------- |
+| `-v, --verbose` | Show token usage and estimated cost when supported. |
 
-**Provider behavior:** The current implementation defaults to OpenRouter for this command.
+This command runs a one-shot query rather than starting an interactive chat session.
 
 ## `doctor`
 
-Check the Node.js version and whether the Anthropic API key is configured.
+Check your Node.js version and whether supported provider API keys are configured.
 
 ```bash
 npm run dev -- doctor
 ```
 
-The current check requires Node.js 18 or higher.
+The command checks whether Node.js 18 or higher is installed and reports the configuration status of these providers:
 
-Note that this command checks `ANTHROPIC_API_KEY` specifically, even if you intend to use another provider.
+* Claude: `ANTHROPIC_API_KEY`
+* OpenAI: `OPENAI_API_KEY`
+* OpenRouter: `OPENROUTER_API_KEY`
+* Gemini: `GEMINI_API_KEY`
+* Groq: `GROQ_API_KEY`
+
+This checks whether keys are configured; it does not guarantee that a key is valid or that the account has available credits.
+
+## `login`
+
+Start the ANAS CLI cloud login flow.
+
+```bash
+npm run dev -- login
+```
+
+## `logout`
+
+Log out of the ANAS CLI cloud session.
+
+```bash
+npm run dev -- logout
+```
 
 ## `banner`
 
@@ -102,10 +126,30 @@ Display the CLI version:
 npm run dev -- --version
 ```
 
-The currently documented CLI version is `0.1.0`.
+The current CLI version is `0.1.0`.
+
+## Slash commands
+
+These commands are available inside an interactive chat session:
+
+| Command       | Description                   |
+| ------------- | ----------------------------- |
+| `/help`       | Show available chat commands. |
+| `/exit`       | Exit the chat session.        |
+| `/new`        | Start a new conversation.     |
+| `/history`    | View conversation history.    |
+| `/resume`     | Resume a conversation.        |
+| `/mode ask`   | Switch to Ask mode.           |
+| `/mode agent` | Switch to Agent mode.         |
+| `/mode plan`  | Switch to Plan mode.          |
+
+Unknown slash commands display the available command help.
 
 ## Related documentation
 
-- [Quickstart](/docs/getting-started/quickstart) — start your first session.
-- [AI Providers](/docs/configuration/providers) — configure provider credentials.
-- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+* [Installation](/docs/getting-started/installation) — install and configure ANAS CLI.
+* [Quickstart](/docs/getting-started/quickstart) — start your first session.
+* [AI Providers](/docs/guides/ai-providers) — configure provider credentials.
+* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+* [Tools & Permissions](/docs/guides/tools-and-permissions) — explore available tools and permissions.
+* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

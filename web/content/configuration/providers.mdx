@@ -1,11 +1,11 @@
 ---
 title: AI Providers
-description: Configure Claude, OpenAI, OpenRouter, and Gemini for ANAS CLI.
+description: Configure Claude, OpenAI, OpenRouter, Gemini, and Groq for ANAS CLI.
 ---
 
 # AI Providers
 
-ANAS CLI supports four AI providers. Configure the API credentials for your preferred provider to start using its models.
+ANAS CLI supports five AI providers. Configure the API key for your preferred provider to start using its models.
 
 ## Supported providers
 
@@ -15,70 +15,98 @@ ANAS CLI supports four AI providers. Configure the API credentials for your pref
 | OpenAI     | `OPENAI_API_KEY`     |
 | OpenRouter | `OPENROUTER_API_KEY` |
 | Gemini     | `GEMINI_API_KEY`     |
+| Groq       | `GROQ_API_KEY`       |
 
 ## 1. Configure your API key
 
-Create a `.env` file in the root directory of your ANAS CLI project.
+Create a `.env` file in the project root and add the key for the provider you want to use.
 
-Add the environment variable for the provider you want to use:
+**Claude**
 
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
-For OpenAI:
+**OpenAI**
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-For OpenRouter:
+**OpenRouter**
 
 ```bash
 OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-For Gemini:
+**Gemini**
 
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-Replace each placeholder with your actual API key. You only need to configure credentials for the provider you intend to use.
+**Groq**
+
+```bash
+GROQ_API_KEY=your_groq_api_key
+```
+
+Replace the placeholder with your actual API key. You only need to configure credentials for the provider you intend to use.
 
 **Security reminder:** Never commit your `.env` file to version control or share your API keys publicly.
 
 ## 2. Select a provider
 
-The guided startup experience includes a provider-selection step:
+Start the guided setup:
 
 ```bash
 npm run dev -- wakeup
 ```
 
-The provider factory supports these identifiers:
+ANAS CLI checks the environment, prompts you to select a provider, and validates that provider's API key.
 
-- `claude`
-- `openai`
-- `openrouter`
-- `gemini`
+The supported provider identifiers are:
 
-The identifier used internally may differ from the provider's display name.
+* `claude`
+* `openai`
+* `openrouter`
+* `gemini`
+* `groq`
 
-## 3. Troubleshoot API key issues
+Your provider selection is saved in the CLI configuration.
 
-The current `doctor` command checks `ANTHROPIC_API_KEY` specifically. It may report that the environment is not ready even when another provider's API key is configured.
+### Choose an OpenRouter model
 
-If you encounter a connection error:
+When you select OpenRouter through `wakeup`, ANAS CLI fetches available text-only models that support tool calling and lets you choose one.
 
-1. Verify that your `.env` file is in the project root.
-2. Check that the environment variable matches the selected provider.
-3. Confirm that the API key is valid and has the required access.
-4. Check the provider-specific error message.
+The model picker displays the model name, ID, and available input/output pricing information. Free models are labelled accordingly.
 
-Provider selection and credential validation depend on the current CLI implementation.
+If no eligible models are found or the model list cannot be loaded, the setup reports an error.
+
+## 3. Check your environment
+
+Run:
+
+```bash
+npm run dev -- doctor
+```
+
+This command checks that Node.js is version 18 or higher and reports whether an API key is configured for each supported provider.
+
+It checks for configured keys; this does not necessarily verify that every key is valid or has sufficient credits.
+
+## 4. Troubleshoot API key issues
+
+If you encounter a provider or connection error:
+
+1. Confirm that your `.env` file is in the project root.
+2. Check that the environment variable matches your selected provider.
+3. Verify that the API key is valid and has the required access or credits.
+4. For OpenRouter, check that the selected model is available and supports tool calling.
+5. Read the error message and check the provider's service status if needed.
 
 ## What's next?
 
-- [Quickstart](/docs/getting-started/quickstart) — launch your first session.
-- [Modes](/docs/guides/modes) — explore Ask, Plan, and Agent modes.
+* [Quickstart](/docs/getting-started/quickstart) — launch your first session.
+* [Modes](/docs/guides/modes) — explore Ask, Agent, and Plan modes.
+* [CLI Commands](/docs/reference/commands) — see available commands and options.

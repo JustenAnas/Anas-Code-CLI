@@ -28,7 +28,7 @@ Understand, plan, and build with an AI agent that works directly with your codeb
 </div>
 
 <div className="anas-terminal">
-  
+
 <div className="anas-terminal-bar">
   <span>TERMINAL</span>
   <TerminalCopyButton />
@@ -38,10 +38,11 @@ Understand, plan, and build with an AI agent that works directly with your codeb
   <code>npm run dev -- wakeup</code>
 </pre>
 
-  <div className="anas-terminal-note">
-    <span className="anas-status-dot" />
-    <span>Ready to build.</span>
-  </div>
+<div className="anas-terminal-note">
+  <span className="anas-status-dot" />
+  <span>Ready to build.</span>
+</div>
+
 </div>
 
 ## One agent. Three ways to work.
@@ -49,21 +50,39 @@ Understand, plan, and build with an AI agent that works directly with your codeb
 <div className="anas-mode-grid">
 
 <div className="anas-mode-card">
-  <p className="anas-mode-number">01 / ASK</p>
-  ### Understand first Explore files, search code, and ask questions with
-  read-only tools. [Explore Ask mode →](/docs/guides/modes)
+
+<p className="anas-mode-number">01 / ASK</p>
+
+### Understand first
+
+Explore files, search code, and ask questions with read-only tools.
+
+[Explore Ask mode →](/docs/guides/modes)
+
 </div>
 
 <div className="anas-mode-card">
-  <p className="anas-mode-number">02 / PLAN</p>
-  ### Think it through Turn a task into a plan and review the approach before
-  execution. [Explore Plan mode →](/docs/guides/modes)
+
+<p className="anas-mode-number">02 / PLAN</p>
+
+### Think it through
+
+Develop an implementation approach before execution. Plan mode currently has no tools enabled.
+
+[Explore Plan mode →](/docs/guides/modes)
+
 </div>
 
 <div className="anas-mode-card">
-  <p className="anas-mode-number">03 / AGENT</p>
-  ### Make it happen Work through coding tasks with tools and permission checks.
-  [Explore Agent mode →](/docs/guides/modes)
+
+<p className="anas-mode-number">03 / AGENT</p>
+
+### Make it happen
+
+Work through coding tasks with tools, permission checks, and safety guardrails.
+
+[Explore Agent mode →](/docs/guides/modes)
+
 </div>
 
 </div>
@@ -73,29 +92,37 @@ Understand, plan, and build with an AI agent that works directly with your codeb
 <div className="anas-next-grid">
 
 <div>
-  ### 01. Install Set up ANAS CLI and configure your AI provider. [Installation
-  guide →](/docs/getting-started/installation)
+
+### 01. Install
+
+Set up ANAS CLI and configure your AI provider.
+
+[Installation guide →](/docs/getting-started/installation)
+
 </div>
 
 <div>
-  ### 02. Start a session ```bash npm run dev -- chat --mode ask ``` Start by
-  exploring your codebase.
-</div>
 
-<div>
-  ### 03. Choose your workflow ```bash npm run dev -- chat --mode plan npm run
-  dev -- chat --mode agent ``` Plan first or start working.
+### 02. Start a session
+
+```bash
+npm run dev -- chat --mode ask
+```
+
+Start by exploring your codebase.
+
 </div>
 
 </div>
 
 ## Made for real codebases
 
-- **Multiple providers** — Claude, OpenAI, OpenRouter, and Gemini.
-- **Practical tools** — read and edit files, search code, browse directories, run commands, and use Git.
-- **Permission checks** — approvals for sensitive operations.
-- **Flexible workflows** — Ask, Plan, and Agent modes.
+* **Multiple providers** — Claude, OpenAI, OpenRouter, Gemini, and Groq.
+* **Practical tools** — read and edit files, search code, browse directories, run terminal commands, and inspect Git state.
+* **Permission checks** — approvals for terminal commands and file modifications, with additional safety guardrails.
+* **Flexible workflows** — Ask, Plan, and Agent modes.
+* **OpenRouter model selection** — choose from eligible text models that support tool calling.
 
-[Providers](/docs/configuration/providers) · [Tools & permissions](/docs/reference/tools) · [CLI commands](/docs/reference/commands)
+[Providers](/docs/guides/ai-providers) · [Tools & permissions](/docs/guides/tools-and-permissions) · [CLI commands](/docs/reference/commands)
 
 </div>

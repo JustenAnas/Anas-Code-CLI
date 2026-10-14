@@ -5,20 +5,20 @@ description: Learn which tools ANAS CLI can use, how mode restrictions work, and
 
 # Tools & Permissions
 
-ANAS CLI uses tools to inspect project files, make changes, execute terminal commands, and inspect Git state. Tool availability depends on the selected mode and the current implementation.
+ANAS CLI uses tools to inspect project files, make changes, execute terminal commands, search code, and inspect Git state. Tool availability depends on the selected interaction mode.
 
 ## Available tools
 
-| Tool          | Purpose                                               |
-| ------------- | ----------------------------------------------------- |
-| `read_file`   | Read a file.                                          |
-| `write_file`  | Create or overwrite a file.                           |
-| `edit_file`   | Replace exact text in a file.                         |
-| `bash`        | Run a terminal command.                               |
-| `glob`        | Find files using a glob pattern.                      |
-| `list_dir`    | List directory contents.                              |
-| `search_code` | Search project file contents.                         |
-| `git`         | Inspect repository status, diffs, logs, and branches. |
+| Tool          | Purpose                                                                          |
+| ------------- | -------------------------------------------------------------------------------- |
+| `read_file`   | Read file contents.                                                              |
+| `write_file`  | Create or overwrite a file.                                                      |
+| `edit_file`   | Replace specific text in an existing file.                                       |
+| `bash`        | Execute a terminal command using the Windows command shell.                      |
+| `glob`        | Find files matching a glob pattern.                                              |
+| `list_dir`    | List directory contents.                                                         |
+| `search_code` | Search project files for matching code or text.                                  |
+| `git`         | Inspect Git repository information, including status, diffs, logs, and branches. |
 
 ## Tool access by mode
 
@@ -28,28 +28,28 @@ Ask mode is restricted to read-only inspection tools.
 
 **Available tools:**
 
-- `read_file`
-- `search_code`
-- `glob`
-- `list_dir`
+* `read_file`
+* `search_code`
+* `glob`
+* `list_dir`
 
-File-writing, editing, terminal, and Git tools are not available through Ask mode's tool allowlist.
+Ask mode cannot use its tool allowlist to write or edit files, execute terminal commands, or access the Git tool.
 
 ### Agent mode
 
 Agent mode can access all eight registered tools, subject to permission checks and guardrails.
 
-This enables the agent to inspect files, make code changes, run commands, and inspect repository state when permitted.
+The agent can inspect files, make code changes, execute terminal commands, search the codebase, and inspect Git state when permitted.
 
 ### Plan mode
 
 Plan mode currently has no tools enabled through its tool allowlist.
 
-It cannot invoke the registered tools through the current implementation.
+It cannot invoke registered tools through the current implementation.
 
 ## Permission prompts
 
-ANAS requests confirmation before executing these operations:
+ANAS CLI requests confirmation before executing these operations:
 
 | Tool         | Why confirmation is required           |
 | ------------ | -------------------------------------- |
@@ -57,36 +57,57 @@ ANAS requests confirmation before executing these operations:
 | `write_file` | A file may be created or overwritten.  |
 | `edit_file`  | Existing file contents may be changed. |
 
-The permission prompt displays the operation details and asks whether to allow it.
-
-If permission is denied, that exact operation is blocked from being retried.
+Review the operation details before approving a permission prompt. If permission is denied, the operation is blocked rather than being executed without authorization.
 
 ## Guardrails
 
-ANAS applies additional checks before executing operations.
+ANAS CLI applies additional checks to help prevent unintended operations.
 
-### Protected paths
+### Workspace and protected paths
 
-File-writing and editing operations are checked against protected-path rules. Certain restricted changes require explicit authorization in the user's prompt.
+File operations accept relative or absolute paths, subject to workspace-boundary checks. Paths outside the permitted workspace can be blocked.
+
+Writing and editing operations also apply protected-path checks. Certain restricted changes may require explicit authorization in the user's prompt.
 
 ### Destructive commands
 
-Terminal commands are checked against destructive-command guardrails before execution.
+Terminal commands are checked against destructive-command guardrails before execution. Review the command and its effects before approving it.
 
 ### Repeated failures
 
-ANAS stops retrying an identical operation after three failures.
+ANAS CLI stops retrying an identical operation after three failures. If an operation repeatedly fails, inspect the error and adjust the approach instead of repeating the same attempt.
+
+### Secret redaction
+
+The `read_file` tool redacts detected secrets in file contents. This helps reduce accidental exposure, but should not be treated as a guarantee that every secret will be detected.
+
+## Terminal command compatibility
+
+The `bash` tool currently uses the Windows command shell (`cmd`), not a Unix shell.
+
+For example, Windows commands such as these are appropriate:
+
+```cmd
+dir
+type package.json
+git status
+```
+
+Unix-specific commands, shell syntax, and flags may not work as expected.
 
 ## Safe usage practices
 
-- Review permission prompts before approving operations.
-- Read tool output carefully before using it to make decisions.
-- Inspect file changes before committing or deploying your project.
-- Verify terminal commands before allowing execution.
-- Remember that tool access depends on the selected mode and current implementation.
+* Review permission prompts before approving operations.
+* Check file paths before allowing file changes.
+* Read tool output carefully before making decisions.
+* Inspect code changes and Git diffs before committing.
+* Verify terminal commands before allowing execution.
+* Never assume a tool is available in every mode.
+* Treat secret redaction as a safeguard, not a guarantee.
 
 ## Related documentation
 
-- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-- [CLI Commands](/docs/reference/commands) — explore available commands.
-- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.
+* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+* [CLI Commands](/docs/reference/commands) — explore available commands and options.
+* [AI Providers](/docs/guides/ai-providers) — configure provider credentials.
+* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

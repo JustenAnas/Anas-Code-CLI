@@ -11,7 +11,7 @@ ANAS CLI currently runs from source code. Follow these steps to install dependen
 
 Before you begin, make sure you have:
 
-- [Node.js](https://nodejs.org/) installed.
+- [Node.js](https://nodejs.org/) version 18 or higher.
 - npm installed.
 - The ANAS CLI repository cloned to your machine.
 
@@ -33,21 +33,53 @@ npm install
 
 ANAS CLI uses a root-level `.env` file for environment configuration.
 
-Add the provider credentials required for your setup before using AI features.
+Add the API key for the provider you intend to use:
 
-**Keep your API keys private.** Never commit your `.env` file to Git or share your credentials publicly.
+| Provider   | Environment variable |
+| ---------- | -------------------- |
+| Claude     | `ANTHROPIC_API_KEY`  |
+| OpenAI     | `OPENAI_API_KEY`     |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Gemini     | `GEMINI_API_KEY`     |
+| Groq       | `GROQ_API_KEY`       |
 
-## 4. Start in development mode
+For example, to configure OpenAI:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+```
+
+Replace the placeholder with your actual API key. You do not need to configure every provider.
+
+Keep your API keys private. Never commit your `.env` file to Git or share your credentials publicly.
+
+## 4. Check your environment
+
+Run the environment check:
+
+```bash
+npm run dev -- doctor
+```
+
+This checks that Node.js is version 18 or higher and reports whether API keys are configured. It does not guarantee that the keys are valid or have sufficient credits.
+
+## 5. Start in development mode
 
 Run the CLI directly from its TypeScript source:
 
 ```bash
-npm run dev
+npm run dev -- --help
 ```
 
-This command executes `src/index.ts` using `tsx`, so you can run the CLI without compiling it first.
+To launch the guided setup:
 
-## 5. Build for production
+```bash
+npm run dev -- wakeup
+```
+
+This command runs `src/index.ts` through `tsx`, so you can use the CLI without compiling it first.
+
+## 6. Build for production
 
 Compile the TypeScript project:
 
@@ -65,5 +97,8 @@ The production command runs `dist/index.js`. Make sure your TypeScript configura
 
 ## What's next?
 
-- [Quickstart](/docs/getting-started/quickstart) — learn how to start using ANAS CLI.
-- [Provider Configuration](/docs/configuration/providers) — configure your AI provider.
+* [Quickstart](/docs/getting-started/quickstart) — launch your first session.
+* [AI Providers](/docs/guides/ai-providers) — configure your provider.
+* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+* [CLI Commands](/docs/reference/commands) — explore available commands.
+* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot setup issues.
