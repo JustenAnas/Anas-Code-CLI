@@ -1,16 +1,17 @@
 {
-  "name": "claude-cli",
+  "name": "anas-cli",
   "version": "1.0.0",
   "description": "",
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
@@ -37,5 +38,13 @@
     "openai": "^7.15.0",
     "ora": "^9.4.1",
     "react": "^19.3.0"
-  }
+  },
+  "bin": {
+    "anas": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }
