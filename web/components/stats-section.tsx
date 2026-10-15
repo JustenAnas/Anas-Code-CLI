@@ -25,7 +25,7 @@ const stats = [
 
 export default function StatsSection() {
   return (
-    <section className="relative z-20 min-h-125 px-6 py-24 text-black">
+    <section className="relative z-20 min-h-125 bg-white px-6 py-24 text-black">
       <hr className="border-black/10" />
 
       <div className="mx-auto max-w-7xl">

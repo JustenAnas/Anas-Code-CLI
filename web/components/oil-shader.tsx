@@ -20,6 +20,10 @@ import { useEffect, useRef } from "react";
  *   6. Gradient subtract (project to divergence-free)
  *   7. Advect dye + decay
  *   8. Render (normals, Fresnel, thin-film interference, GGX spec)
+ *
+ * NOTE: pointer events are listened for on `window` (and mapped into the
+ * canvas rect) so the effect still works when this canvas sits behind
+ * other content with pointer-events-none.
  */
 export default function OilShader() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -45,9 +49,10 @@ export default function OilShader() {
       return;
     }
 
-    // Float textures are required for the sim.
+    // Float render targets are required for the sim.
+    // (Linear filtering of half-float textures is core in WebGL2,
+    // so no OES_texture_float_linear needed.)
     const floatExt = gl.getExtension("EXT_color_buffer_float");
-    const linearFloat = gl.getExtension("OES_texture_float_linear");
     if (!floatExt) {
       canvas.style.background =
         "radial-gradient(ellipse at center, #0a0a0f 0%, #000 70%)";
@@ -408,7 +413,7 @@ export default function OilShader() {
 
       // Stronger vignette pulls the edges into deep black.
       vec2 q = uv - 0.5;
-      float vig = smoothstep(0.85, 0.15, length(q));
+      float vig = 1.0 - smoothstep(0.15, 0.85, length(q));
       col *= mix(0.45, 1.0, vig);
 
       // Mild chromatic aberration in fast-moving regions.
@@ -460,6 +465,9 @@ export default function OilShader() {
       if (!gl!.getProgramParameter(p, gl!.LINK_STATUS)) {
         console.error("[v0] program link error:", gl!.getProgramInfoLog(p));
       }
+      // Shaders are no longer needed once linked.
+      gl!.deleteShader(vs);
+      gl!.deleteShader(fs);
       // Cache uniform locations.
       const uniforms: Record<string, WebGLUniformLocation | null> = {};
       const n = gl!.getProgramParameter(p, gl!.ACTIVE_UNIFORMS) as number;
@@ -596,11 +604,36 @@ export default function OilShader() {
     const SIM_RES = 256; // half-res-ish sim
     const DYE_RES = 1024;
 
-    let velocity!: DoubleFBO;
-    let dye!: DoubleFBO;
-    let pressure!: DoubleFBO;
-    let divergenceFbo!: FBO;
-    let curlFbo!: FBO;
+    let velocity: DoubleFBO | undefined;
+    let dye: DoubleFBO | undefined;
+    let pressure: DoubleFBO | undefined;
+    let divergenceFbo: FBO | undefined;
+    let curlFbo: FBO | undefined;
+
+    function destroyFBO(target: FBO | undefined) {
+      if (!target) return;
+      gl!.deleteFramebuffer(target.fbo);
+      gl!.deleteTexture(target.tex);
+    }
+
+    function destroyDoubleFBO(target: DoubleFBO | undefined) {
+      if (!target) return;
+      destroyFBO(target.read);
+      destroyFBO(target.write);
+    }
+
+    function disposeFBOs() {
+      destroyDoubleFBO(velocity);
+      destroyDoubleFBO(dye);
+      destroyDoubleFBO(pressure);
+      destroyFBO(divergenceFbo);
+      destroyFBO(curlFbo);
+      velocity = undefined;
+      dye = undefined;
+      pressure = undefined;
+      divergenceFbo = undefined;
+      curlFbo = undefined;
+    }
 
     function getRes(target: number, w: number, h: number) {
       const ar = w / h;
@@ -612,6 +645,9 @@ export default function OilShader() {
     let dprHeight = 0;
 
     function initFBOs() {
+      // Free the previous set (ResizeObserver fires on mount + every resize).
+      disposeFBOs();
+
       const rect = canvas!.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       dprWidth = Math.max(1, Math.floor(rect.width * dpr));
@@ -622,7 +658,8 @@ export default function OilShader() {
       const sim = getRes(SIM_RES, dprWidth, dprHeight);
       const dyeR = getRes(DYE_RES, dprWidth, dprHeight);
 
-      const filter = linearFloat ? gl!.LINEAR : gl!.NEAREST;
+      // Half-float textures support linear filtering in WebGL2 core.
+      const filter = gl!.LINEAR;
       // velocity: RG16F
       velocity = createDouble(
         sim.w,
@@ -710,40 +747,51 @@ export default function OilShader() {
       smoothSpeed: 0,
     };
 
+    // Track whether the pointer is currently over the canvas area.
+    let inside = false;
+
     function updatePointer(clientX: number, clientY: number) {
       const rect = canvas!.getBoundingClientRect();
       const nx = (clientX - rect.left) / rect.width;
       const ny = 1.0 - (clientY - rect.top) / rect.height;
+
+      if (nx < 0 || nx > 1 || ny < 0 || ny > 1) {
+        inside = false;
+        return;
+      }
+
+      if (!inside) {
+        // Entering: snap to the new position so we don't draw a streak
+        // from wherever the pointer last was.
+        pointer.x = nx;
+        pointer.y = ny;
+        inside = true;
+      }
+
       pointer.px = pointer.x;
       pointer.py = pointer.y;
       pointer.x = nx;
       pointer.y = ny;
       pointer.dx = nx - pointer.px;
       pointer.dy = ny - pointer.py;
-      pointer.speed = Math.sqrt(
-        pointer.dx * pointer.dx + pointer.dy * pointer.dy,
-      );
+      pointer.speed = Math.hypot(pointer.dx, pointer.dy);
       pointer.moved = true;
     }
 
-    const onMove = (e: PointerEvent) => {
-      updatePointer(e.clientX, e.clientY);
-    };
+    const onMove = (e: PointerEvent) => updatePointer(e.clientX, e.clientY);
     const onDown = (e: PointerEvent) => {
       pointer.down = true;
-      // Reset prev so a tap doesn't yank velocity from across the screen.
-      const rect = canvas!.getBoundingClientRect();
-      pointer.x = (e.clientX - rect.left) / rect.width;
-      pointer.y = 1.0 - (e.clientY - rect.top) / rect.height;
-      pointer.px = pointer.x;
-      pointer.py = pointer.y;
+      updatePointer(e.clientX, e.clientY);
     };
     const onUp = () => {
       pointer.down = false;
     };
 
-    canvas.addEventListener("pointermove", onMove, { passive: true });
-    canvas.addEventListener("pointerdown", onDown, { passive: true });
+    // Listen on window: the canvas sits behind the pricing content
+    // (and its wrapper is pointer-events-none), so it never receives
+    // pointer events itself.
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onUp, { passive: true });
 
     // Resize.
@@ -785,6 +833,8 @@ export default function OilShader() {
     }
 
     function applyPointerSplats() {
+      if (!velocity || !dye) return;
+
       const dx = pointer.dx;
       const dy = pointer.dy;
       const dlen = Math.hypot(dx, dy);
@@ -846,7 +896,7 @@ export default function OilShader() {
     let idleT = 0;
     function idleDrift(dt: number) {
       idleT += dt;
-      if (pointer.moved) return;
+      if (pointer.moved || !velocity || !dye) return;
       const cx = 0.5 + 0.22 * Math.sin(idleT * 0.31);
       const cy = 0.5 + 0.22 * Math.cos(idleT * 0.24);
       const px = 0.5 + 0.22 * Math.sin((idleT - dt) * 0.31);
@@ -870,7 +920,7 @@ export default function OilShader() {
 
     let last = performance.now();
     let raf = 0;
-    let startTime = performance.now();
+    const startTime = performance.now();
 
     // Sim params.
     const VELOCITY_DISSIPATION = 0.6; // viscosity feel
@@ -879,6 +929,8 @@ export default function OilShader() {
     const CURL_STRENGTH = 22.0;
 
     function step(dt: number) {
+      if (!velocity || !dye || !pressure || !divergenceFbo || !curlFbo) return;
+
       // 1) Curl
       {
         const { p, u } = progs.curl;
@@ -974,6 +1026,7 @@ export default function OilShader() {
     }
 
     function render() {
+      if (!velocity || !dye) return;
       const { p, u } = progs.render;
       gl!.useProgram(p);
       gl!.uniform1i(u["u_dye"]!, dye.read.attach(0));
@@ -1002,26 +1055,32 @@ export default function OilShader() {
     raf = requestAnimationFrame(frame);
 
     // ---------- Cleanup ----------
+    // IMPORTANT: do NOT call WEBGL_lose_context.loseContext() here.
+    // React Strict Mode (dev) and Fast Refresh unmount + remount this
+    // effect on the same <canvas>; getContext("webgl2") would hand back
+    // the same, now-dead context and nothing would ever render.
+    // Instead, free our own GL resources and leave the context alive.
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
       document.removeEventListener("visibilitychange", onVis);
 
-      // Best-effort GL resource cleanup.
-      const lose = gl.getExtension("WEBGL_lose_context");
-      lose?.loseContext();
+      disposeFBOs();
+      Object.values(progs).forEach(({ p }) => gl.deleteProgram(p));
+      gl.deleteBuffer(quadBuf);
+      gl.deleteVertexArray(vao);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="block h-full w-full touch-none select-none"
+      className="block h-full w-full select-none"
       style={{ cursor: "crosshair" }}
-      aria-label="Interactive iridescent oil shader. Drag your cursor to disturb the surface."
+      aria-label="Interactive iridescent oil shader. Move your cursor to disturb the surface."
     />
   );
 }

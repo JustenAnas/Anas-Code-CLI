@@ -205,9 +205,11 @@ export default function PricingSection() {
 
   return (
     <section className="relative z-10 overflow-hidden bg-black px-6 py-32 text-white">
-      <div className="pointer-events-none absolute inset-0 z-0">
-        <OilShader />
-      </div>
+      
+<div className="pointer-events-none absolute inset-0 z-0">
+  <OilShader />
+</div>
+
 
       <div className="relative z-10 mx-auto max-w-7xl">
         <div className="max-w-5xl">

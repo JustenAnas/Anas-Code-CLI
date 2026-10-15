@@ -31,7 +31,7 @@ export default function Navbar() {
         </a>
 
         <a
-          href="#github"
+          href="https://github.com/JustenAnas/Anas-Code-CLI"
           className="transition-all duration-300 hover:scale-110 hover:font-bold"
         >
           GitHub
