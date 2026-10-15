@@ -204,12 +204,13 @@ export default function PricingSection() {
   }
 
   return (
-    <section className="relative z-10 overflow-hidden bg-black px-6 py-32 text-white">
-      
-<div className="pointer-events-none absolute inset-0 z-0">
-  <OilShader />
-</div>
-
+    <section className="relative isolate z-10 overflow-hidden bg-black px-6 py-32 text-white">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden"
+        aria-hidden
+      >
+        <OilShader />
+      </div>
 
       <div className="relative z-10 mx-auto max-w-7xl">
         <div className="max-w-5xl">
@@ -254,10 +255,10 @@ export default function PricingSection() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`flex min-h-[500px] flex-col rounded-2xl border p-7 backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 ${
+              className={`flex min-h-[500px] flex-col rounded-2xl border p-7 transition-all duration-300 hover:-translate-y-2 ${
                 plan.featured
-                  ? "border-white/20 bg-black/80 text-white"
-                  : "border-white/20 bg-white/95 text-black"
+                  ? "border-white/20 bg-black text-white"
+                  : "border-white/20 bg-white text-black"
               }`}
             >
               <div>
