@@ -10,6 +10,10 @@ A multi-provider AI coding agent for the terminal. It explores your project, edi
 ![TypeScript](https://img.shields.io/badge/TypeScript-ESM-8B5CF6?style=flat-square&logo=typescript&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-8B5CF6?style=flat-square)
 
+[Docs](#documentation) · [GitHub](https://github.com/JustenAnas/Anas-Code-CLI) · [npm](https://www.npmjs.com/package/anas-cli)
+
+Built by [Anas](https://github.com/JustenAnas)
+
 </div>
 
 ---
@@ -40,6 +44,10 @@ It is not a chat window with a code box. The model gets real tools (file access,
 | **Interactive chat** | Multi-turn sessions with slash commands |
 | **Persistent config** | Provider and mode preferences saved between sessions |
 | **Windows-friendly** | `bash` tool runs Windows CMD commands |
+
+## Documentation
+
+Docs site: **https://YOUR-VERCEL-LINK-HERE.vercel.app** *(coming soon, replace this link once deployed)*
 
 ## Installation
 
