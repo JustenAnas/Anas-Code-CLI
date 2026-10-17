@@ -47,7 +47,7 @@ It is not a chat window with a code box. The model gets real tools (file access,
 
 ## Documentation
 
-Docs site: **https://YOUR-VERCEL-LINK-HERE.vercel.app** *(coming soon, replace this link once deployed)*
+Docs site: **https://anas-cli.vercel.app/**  
 
 ## Installation
 
