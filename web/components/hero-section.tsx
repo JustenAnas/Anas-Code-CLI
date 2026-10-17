@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Lanyard from "@/components/ui/lanyard";
 import DecryptedText from "@/components/DecryptedText";
@@ -9,12 +11,76 @@ import { transitionVariants } from "@/lib/utils";
 import Dither from "@/components/Dither";
 
 export default function HeroSection() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkAuth() {
+      try {
+        const response = await fetch("/api/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (active) setIsLoggedIn(response.ok);
+      } catch {
+        if (active) setIsLoggedIn(false);
+      } finally {
+        if (active) setAuthLoading(false);
+      }
+    }
+
+    checkAuth();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+
+    try {
+      const response = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      setIsLoggedIn(false);
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setLoggingOut(false);
+    }
+  }
+
+  const entranceVariants = {
+    container: {
+      visible: {
+        transition: {
+          staggerChildren: 0.12,
+          delayChildren: 1.05,
+        },
+      },
+    },
+    ...transitionVariants,
+  };
+
   return (
     <main className="overflow-x-hidden">
       <div className="absolute w-full h-dvh max-h-155 sm:max-h-115 md:max-h-125 lg:max-h-190 xl:max-h-195">
         <Dither
           waveColor={[
-            0.30980392156862746, 0.30980392156862746, 0.30980392156862746,
+            0.30980392156862746,
+            0.30980392156862746,
+            0.30980392156862746,
           ]}
           disableAnimation={false}
           enableMouseInteraction
@@ -26,6 +92,7 @@ export default function HeroSection() {
           waveSpeed={0.05}
         />
       </div>
+
       <section className="lg:h-screen">
         <div className="grid grid-cols-1 grid-rows-2 pb-24 pt-12 md:pb-32 lg:grid-cols-2 lg:grid-rows-1 lg:pb-56 lg:pt-24">
           {/* Left side */}
@@ -77,25 +144,27 @@ export default function HeroSection() {
               </TextEffect>
 
               <AnimatedGroup
-                variants={{
-                  container: {
-                    visible: {
-                      transition: {
-                        staggerChildren: 0.12,
-                        delayChildren: 1.05,
-                      },
-                    },
-                  },
-                  ...transitionVariants,
-                }}
+                variants={entranceVariants}
                 className="mt-12 flex flex-col items-center justify-center gap-2 sm:flex-row lg:justify-start"
               >
-                <Link
-                  href="/signup"
-                  className="rounded-full bg-white px-6 py-3 text-base font-medium text-black transition hover:bg-white/90"
-                >
-                  Sign Up
-                </Link>
+                {!authLoading &&
+                  (isLoggedIn ? (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="rounded-full bg-white px-6 py-3 text-base font-medium text-black transition hover:bg-white/90 disabled:opacity-50"
+                    >
+                      {loggingOut ? "Logging out..." : "Logout"}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/signup"
+                      className="rounded-full bg-white px-6 py-3 text-base font-medium text-black transition hover:bg-white/90"
+                    >
+                      Sign Up
+                    </Link>
+                  ))}
 
                 <Link
                   href="/docs"
@@ -107,15 +176,19 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Right side */}
-          <div className="relative flex w-full flex-col items-center lg:-mt-12">
+          {/* Right side — same entrance animation as left buttons */}
+          <AnimatedGroup
+            variants={entranceVariants}
+            className="relative flex w-full flex-col items-center lg:-mt-12"
+          >
             <div className="relative w-[96%] max-w-4xl">
               <img
                 src="/hero-preview.png"
                 alt="ANAS CLI preview"
                 className="h-110 w-full rounded-2xl border border-white/10 object-cover"
               />
-              {/* card */}
+
+              {/* Lanyard */}
               <div className="pointer-events-auto absolute inset-0 z-10">
                 <Lanyard
                   position={[0, 0, 20]}
@@ -144,7 +217,7 @@ export default function HeroSection() {
                 </button>
               </div>
             </div>
-          </div>
+          </AnimatedGroup>
         </div>
       </section>
     </main>
