@@ -1,0 +1,88 @@
+---
+title: Security
+description: How ANAS CLI protects credentials, authenticates cloud requests, and controls agent tool access.
+---
+
+# Security
+
+ANAS CLI combines local coding-agent permissions with authenticated cloud services. This guide explains the protections currently implemented, their limitations, and practical steps for keeping your account and provider credentials safe.
+
+## API keys and provider connections
+
+ANAS CLI supports local provider credentials supplied through environment variables. Do not commit `.env` files or paste API keys into chats, issues, or logs.
+
+For the **OpenAI cloud connection**, ANAS CLI can save an API key through its authenticated backend. The server encrypts the key using **AES-256-GCM** with a server-side encryption secret before storing it. The API returns key presence/status, not the decrypted key.
+
+When the CLI makes a cloud OpenAI request, the backend looks up the encrypted key belonging to the authenticated user, decrypts it on the server, and calls OpenAI. The CLI does not receive the saved key back through this flow.
+
+**Scope:** Cloud chat proxy behavior described here is currently implemented for OpenAI. Do not assume every listed provider uses the same cloud proxy.
+
+**Limitations:** Encryption protects stored key material against some forms of database disclosure. It does not protect against compromise of both the database and the server-side encryption secret, or against an attacker with sufficient access to the running backend.
+
+## CLI authentication
+
+- CLI login tokens are generated using 32 cryptographically random bytes.
+- Only SHA-256 hashes of CLI tokens are stored in MongoDB.
+- CLI tokens expire after 30 days and can be revoked by the backend.
+- Browser sessions are separate from CLI tokens. Browser session cookies use `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
+- Account passwords are hashed with Argon2id.
+
+A stolen, unexpired CLI token can be used to authenticate as its owner until revoked or expired. Treat your local CLI configuration and computer account as sensitive.
+
+## Per-user cloud key isolation
+
+Cloud provider-key endpoints require a valid CLI Bearer token. Key storage, lookup, and deletion are scoped to the authenticated user's ID. The provider-chat endpoint retrieves the OpenAI key for that user rather than accepting a provider key from the chat request.
+
+## Cloud AI request rate limiting
+
+The OpenAI cloud chat endpoint enforces a **30-request-per-minute limit per authenticated user**. The limit uses atomic MongoDB counters shared across backend instances, rather than an in-memory counter on one server.
+
+When the limit is exceeded, the endpoint returns HTTP **429** with a `Retry-After` header indicating when to retry. The MongoDB collection has a TTL index to clean up expired counter records.
+
+The limit uses fixed one-minute windows. Multiple model calls made by an agent while handling a single prompt each count as separate requests.
+
+**Verification status:** TypeScript compilation, MongoDB counter behavior (requests 1–30 allowed; request 31 blocked), and an authenticated local HTTP 429 response with `Retry-After` have been tested. This does not establish that the production deployment has been tested.
+
+**Important:** Rate limiting is not a billing or spending cap. API usage is billed according to the provider's pricing and account settings. Monitor usage and set provider-side budget controls where available.
+
+## Tool permissions and workspace safety
+
+ANAS CLI provides three modes:
+
+| Mode | Tool access |
+| --- | --- |
+| Ask | Read-only tools: `read_file`, `search_code`, `glob`, `list_dir` |
+| Plan | No registered tools enabled |
+| Agent | All registered tools, subject to permissions and guardrails |
+
+In Agent mode, terminal commands and file writes/edits require permission. Workspace-boundary checks restrict file operations, and protected-path checks guard sensitive files and directories. The `read_file` tool also attempts to redact detected secrets; detection is not guaranteed to catch every secret.
+
+Review proposed commands, paths, and diffs before approving operations. Model-generated instructions and tool output should not be treated as trusted instructions.
+
+See [Tools & Permissions](/docs/reference/tools) and [Ask, Agent, and Plan Modes](/docs/guides/modes).
+
+## Errors and credential safety
+
+Cloud API errors may indicate invalid keys, provider quota/rate limits, expired CLI authentication, or the ANAS CLI request limit. A `429` response from ANAS CLI's rate limiter includes `Retry-After`; a provider quota error may require checking your OpenAI account.
+
+Never share a CLI token, provider API key, `.env` file, or unredacted authentication log when reporting a problem.
+
+## Security work still in progress
+
+The following should **not** be considered implemented or verified solely because the protections above exist:
+
+- Per-user spending caps and detailed cloud AI usage accounting.
+- Rate limiting for login, OTP, and other authentication endpoints.
+- Comprehensive request-body streaming limits, upstream timeouts, and cancellation handling.
+- Complete error-log sanitization and tool-schema hardening.
+- Production deployment and load/concurrency verification of the rate limiter.
+- Device/session management for listing and remotely revoking individual CLI sessions.
+
+Security controls reduce risk but do not guarantee that accounts, keys, or projects cannot be compromised.
+
+## Related documentation
+
+- [AI Providers](/docs/configuration/providers)
+- [Tools & Permissions](/docs/reference/tools)
+- [CLI Commands](/docs/reference/commands)
+- [Common Errors](/docs/troubleshooting/common-errors)

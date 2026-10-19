@@ -91,9 +91,32 @@ Run:
 npm run dev -- doctor
 ```
 
+
 This command checks that Node.js is version 18 or higher and reports whether an API key is configured for each supported provider.
 
 It checks for configured keys; this does not necessarily verify that every key is valid or has sufficient credits.
+
+
+## ANAS Cloud API keys
+
+ANAS CLI supports saving an OpenAI API key through its
+authenticated cloud backend.
+
+The backend encrypts saved keys using AES-256-GCM
+before storing them in the database.
+
+Cloud requests use the key associated with the
+authenticated user. The saved key is not returned
+to the CLI through the cloud chat endpoint.
+
+The OpenAI cloud chat endpoint also enforces
+30 requests per minute per authenticated user.
+
+This limit does not guarantee a maximum API bill.
+Monitor your provider usage and billing settings.
+
+See [Security](/docs/guides/security) for details.
+
 
 ## 4. Troubleshoot API key issues
 
