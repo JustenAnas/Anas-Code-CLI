@@ -15,6 +15,7 @@ import type { ProviderName } from "../providers/factory.js";
 
 import { config } from "../config/user-config.js";
 import { ClaudeProvider } from "../providers/claude.js";
+import { cloudClient } from "../cloud/client.js";
 
 import {
   fetchOpenRouterModels,
@@ -119,11 +120,8 @@ async function selectAccessMethod(
 async function ensureApiKey(provider: ProviderName): Promise<void> {
   const existingKey = getApiKey(provider);
 
-  // Automatically use an existing key without prompting.
   if (existingKey) {
-    console.log(
-      chalk.green(`✓ ${provider} API key detected`),
-    );
+    console.log(chalk.green(`✓ ${provider} API key detected`));
     return;
   }
 
@@ -157,14 +155,10 @@ async function ensureApiKey(provider: ProviderName): Promise<void> {
 
     setApiKey(provider, key);
 
-    console.log(
-      chalk.green(`✓ ${provider} API key configured`),
-    );
-
+    console.log(chalk.green(`✓ ${provider} API key configured`));
     return;
   }
 }
-
 
 async function requireCloudLogin(): Promise<void> {
   if (isCloudLoggedIn()) {
@@ -188,16 +182,45 @@ async function requireCloudLogin(): Promise<void> {
 
 async function configureProviderAccess(
   provider: ProviderName,
-): Promise<AccessMethod> {
+): Promise<void> {
+  // Local API keys still work.
+  if (getApiKey(provider)) {
+    console.log(chalk.green(`✓ ${provider} local API key detected`));
+    return;
+  }
+
+  // OpenAI can use a key stored in ANAS Cloud.
+  if (provider === "openai") {
+    const hasCloudKey = await cloudClient.hasProviderKey("openai");
+
+    if (hasCloudKey) {
+      console.log(chalk.green("✓ OpenAI cloud API key detected"));
+      return;
+    }
+
+    console.log(
+      chalk.yellow("No OpenAI API key found in ANAS Cloud."),
+    );
+
+    const key = await password({
+      message: "Enter your OpenAI API key:",
+      mask: "*",
+      validate: (value) =>
+        value.trim().length > 0 || "API key cannot be empty.",
+    });
+
+    await cloudClient.saveProviderKey("openai", key.trim());
+
+    console.log(chalk.green("✓ OpenAI API key saved to ANAS Cloud"));
+    return;
+  }
+
   const method = await selectAccessMethod(provider);
 
   if (method === "own-key") {
     await ensureApiKey(provider);
   }
-
-  return method;
 }
-
 
 async function selectOpenRouterModel(): Promise<string> {
   console.log(
@@ -254,17 +277,17 @@ export async function wakeUp(
   try {
     provider = await selectProvider();
 
-    await configureProviderAccess(provider);
-
-    // Mandatory for every provider.
-    // No chat starts without an ANAS Cloud login.
+    // Authenticate before checking cloud API keys.
     await requireCloudLogin();
+
+    await configureProviderAccess(provider);
   } catch (error) {
     console.error(
       fmt.error(
         error instanceof Error ? error.message : String(error),
       ),
     );
+    process.exitCode = 1;
     return;
   }
 
