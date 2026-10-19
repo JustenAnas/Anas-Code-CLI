@@ -29,6 +29,19 @@ export type CloudMemory = {
   updatedAt: string;
 };
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
+export class CloudRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly retryAfter?: string,
+  ) {
+    super(message);
+    this.name = "CloudRequestError";
+  }
+}
+
 export class CloudClient {
   private get token(): string | undefined {
     return config.get("cloudToken");
@@ -54,53 +67,109 @@ export class CloudClient {
       );
     }
 
-    let response: Response;
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+    const onAbort = () => controller.abort();
+
+    if (options.signal?.aborted) {
+      controller.abort();
+    } else {
+      options.signal?.addEventListener("abort", onAbort, {
+        once: true,
+      });
+    }
 
     try {
-      response = await fetch(`${this.apiUrl}${path}`, {
-        ...options,
-        headers: {
-          ...options.headers,
-          Authorization: `Bearer ${token}`,
-          ...(options.body
-            ? { "Content-Type": "application/json" }
-            : {}),
-        },
-      });
-    } catch {
-      throw new Error(
-        `Cannot connect to ANAS Cloud at ${this.apiUrl}. ` +
-          "Check the website server and network.",
+      let response: Response;
+
+      try {
+        response = await fetch(`${this.apiUrl}${path}`, {
+          ...options,
+          signal: controller.signal,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${token}`,
+            ...(options.body
+              ? { "Content-Type": "application/json" }
+              : {}),
+          },
+        });
+      } catch (error) {
+        if (controller.signal.aborted) {
+          if (options.signal?.aborted) {
+            throw new Error(
+              "ANAS Cloud request was cancelled.",
+            );
+          }
+
+          throw new Error(
+            "ANAS Cloud request timed out after 30 seconds.",
+          );
+        }
+
+        throw new Error(
+          `Cannot connect to ANAS Cloud at ${this.apiUrl}. ` +
+            "Check the website server and network.",
+          { cause: error },
+        );
+      }
+
+      if (response.status === 401) {
+        config.delete("cloudToken");
+        config.delete("cloudEmail");
+
+        throw new CloudRequestError(
+          "Your ANAS Cloud login expired. Run: anas login",
+          401,
+        );
+      }
+
+      let result: (T & { error?: string }) | null;
+
+      try {
+        result = (await response.json()) as T & {
+          error?: string;
+        };
+      } catch {
+        result = null;
+      }
+
+      if (!response.ok) {
+        const retryAfter =
+          response.headers.get("Retry-After") ?? undefined;
+
+        const message =
+          result?.error ??
+          `ANAS Cloud request failed (${response.status})`;
+
+        throw new CloudRequestError(
+          response.status === 429 && retryAfter
+            ? `${message}. Retry after ${retryAfter} seconds.`
+            : message,
+          response.status,
+          retryAfter,
+        );
+      }
+
+      if (result === null) {
+        throw new Error(
+          "ANAS Cloud returned an invalid or empty JSON response.",
+        );
+      }
+
+      return result;
+    } finally {
+      clearTimeout(timeout);
+
+      options.signal?.removeEventListener(
+        "abort",
+        onAbort,
       );
     }
-
-    if (response.status === 401) {
-      config.delete("cloudToken");
-      config.delete("cloudEmail");
-
-      throw new Error(
-        "Your ANAS Cloud login expired. Run: anas login",
-      );
-    }
-
-    const result = (await response
-      .json()
-      .catch(() => null)) as (T & { error?: string }) | null;
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error ??
-          `ANAS Cloud request failed (${response.status})`,
-      );
-    }
-
-    if (result === null) {
-      throw new Error(
-        "ANAS Cloud returned an invalid or empty JSON response.",
-      );
-    }
-
-    return result;
   }
 
   async listSessions(): Promise<CloudSession[]> {
@@ -197,8 +266,6 @@ export class CloudClient {
     );
   }
 
-  // Check whether the logged-in user has a saved provider API key.
-  // The actual API key is never returned.
   async hasProviderKey(provider: string): Promise<boolean> {
     const result = await this.request<{
       provider: string;
@@ -210,8 +277,6 @@ export class CloudClient {
     return result.exists;
   }
 
-  // Encrypt and save a provider API key through the ANAS backend.
-  // Encryption happens on the server, not inside the CLI.
   async saveProviderKey(
     provider: string,
     apiKey: string,
@@ -228,7 +293,6 @@ export class CloudClient {
     );
   }
 
-  // Delete a saved provider API key for the logged-in user.
   async deleteProviderKey(provider: string): Promise<void> {
     await this.request<{ success: boolean }>(
       `/api/cli/provider-keys?provider=${encodeURIComponent(provider)}`,
