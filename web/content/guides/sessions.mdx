@@ -1,11 +1,13 @@
 ---
 title: Sessions & Conversation History
-description: Learn how ANAS CLI creates sessions, lists conversation history, resumes local and cloud sessions, and syncs messages.
+description: Manage local conversations, resume cloud sessions, and synchronize messages with ANAS Cloud.
 ---
 
 # Sessions & Conversation History
 
-ANAS CLI organizes interactive conversations into sessions. Each session has a unique ID, creation and update timestamps, conversation messages, and shared agent memory.
+ANAS CLI organizes interactive conversations into sessions.
+
+Sessions allow you to start new conversations, review history, resume previous chats, and synchronize conversations with ANAS Cloud.
 
 ## How sessions work
 
@@ -13,11 +15,13 @@ When you start an interactive chat, ANAS CLI creates a new session automatically
 
 Each session tracks:
 
-* **Session ID:** A unique identifier.
-* **Creation time:** When the session was created.
-* **Last update:** When a message was added or the session was updated.
-* **Messages:** The conversation history, including supported tool-call information.
-* **Memory:** Agent memory shared across sessions within the current chat process.
+- **Session ID:** A unique identifier.
+- **Creation time:** When the session was created.
+- **Last update:** When the session was last modified.
+- **Messages:** Conversation history, including supported tool-call information.
+- **Memory:** Agent memory shared across sessions within the current chat process.
+
+Session history and agent memory are separate features.
 
 ## Start a new session
 
@@ -27,11 +31,13 @@ Use `/new` inside an interactive chat:
 /new
 ```
 
-ANAS CLI creates a fresh session and makes it active. The previous session remains available in the current process.
+ANAS CLI creates a fresh session and makes it active.
 
-Starting a new session does not automatically delete the previous session.
+The previous session remains available within the current CLI process.
 
-## View session history
+Starting a new session does not automatically delete previous conversations.
+
+## View conversation history
 
 Use `/history`:
 
@@ -39,11 +45,17 @@ Use `/history`:
 /history
 ```
 
-The history list displays locally available sessions, including their IDs, last-update timestamps, and message counts.
+ANAS CLI displays locally available sessions, including:
 
-**Important:** `/history` lists sessions held by the current CLI process. It does not list cloud sessions directly.
+- Session ID
+- Last-update timestamp
+- Message count
 
-## Resume a previous session
+The `/history` command lists sessions held by the current CLI process.
+
+It does not directly list every session stored in ANAS Cloud.
+
+## Resume a conversation
 
 Use `/resume`:
 
@@ -51,77 +63,171 @@ Use `/resume`:
 /resume
 ```
 
-ANAS CLI presents a selection menu containing eligible local sessions and, when you're logged in, available cloud sessions.
+ANAS CLI presents eligible local sessions and, when authenticated, available cloud sessions.
 
 ### Resume a local session
 
-Select a session marked `[Local]` to continue its existing conversation within the current process.
+Select a session marked `[Local]`.
 
-Local sessions are stored in memory. They are not automatically saved to a persistent local session database, so they are unavailable after the process exits.
+ANAS CLI restores the conversation from the current process's session storage.
+
+Local sessions are currently maintained in memory rather than a persistent local session database.
+
+After the CLI process exits, those local sessions are no longer available unless they were successfully synchronized to the cloud.
 
 ### Resume a cloud session
 
-Select a session marked `[Cloud]` to retrieve its saved messages from ANAS Cloud.
+Select a session marked `[Cloud]`.
 
-Cloud session access requires a valid login. To sign in, use the CLI's `login` command.
+ANAS CLI retrieves the saved conversation from ANAS Cloud.
+
+Cloud restoration requires authentication.
+
+Sign in using:
 
 ```bash
 npm run dev -- login
 ```
 
-When a cloud session is restored, its saved messages and timestamps are loaded into a local session object.
+When a cloud session is restored:
 
-System-role messages are excluded from the restored conversation history.
+1. ANAS CLI retrieves the selected session.
+2. Saved messages are loaded into a local session object.
+3. Session timestamps are restored.
+4. System-role messages are excluded from the restored conversation history.
+5. The restored session becomes available for continued interaction.
 
-## Cloud synchronization
+Cloud session availability depends on successful synchronization, authentication, and network connectivity.
 
-When you're logged in to ANAS Cloud, ANAS CLI attempts to synchronize conversation data after processing a chat interaction.
+## ANAS Cloud synchronization
 
-The synchronization process:
+ANAS CLI supports synchronizing conversations with ANAS Cloud.
 
-1. Saves session metadata, including the local session ID and working directory.
-2. Derives a session title from the first user message, using up to its first 80 characters.
-3. Saves the session's messages, including supported tool-call information.
+When you're authenticated, the CLI attempts to synchronize conversation data after processing a chat interaction.
 
-Cloud synchronization is optional. If you're not logged in, the CLI skips this synchronization.
+### Synchronization process
 
-If synchronization fails, ANAS CLI reports a cloud-sync error. The local conversation remains in memory.
+1. The CLI identifies the active session.
+2. Session metadata is sent to ANAS Cloud.
+3. The metadata includes the local session ID and working directory.
+4. A session title is derived from the first user message, using up to its first 80 characters.
+5. Conversation messages are synchronized, including supported tool-call information.
+
+ANAS Cloud provides backend endpoints for sessions and their messages.
+
+### When you're not logged in
+
+Cloud synchronization is skipped.
+
+The conversation continues locally within the current process.
+
+### When synchronization fails
+
+ANAS CLI reports a cloud synchronization error.
+
+The local conversation remains available in memory while the process is running.
+
+A failed synchronization should not be treated as a successfully saved cloud conversation.
 
 ## Local sessions vs. cloud sessions
 
-| Behavior                             | Local session | Cloud session                     |
-| ------------------------------------ | ------------- | --------------------------------- |
-| Available during the current process | Yes           | Yes, when loaded                  |
-| Listed by `/history`                 | Yes           | Not directly                      |
-| Available through `/resume`          | Yes           | Yes, when logged in and available |
-| Survives closing the CLI             | No            | Can be retrieved from the cloud   |
-| Requires login                       | No            | Yes                               |
+| Feature | Local sessions | Cloud sessions |
+| --- | --- | --- |
+| Available during current process | Yes | Yes, after loading |
+| Listed by `/history` | Yes | Not directly |
+| Available through `/resume` | Yes | Yes, when authenticated |
+| Survives closing the CLI | No | Yes, if successfully saved |
+| Requires ANAS Cloud login | No | Yes |
+| Requires internet access | No | Yes |
+| Stored in persistent local database | No | No, stored in cloud backend |
+| Supports continued conversations | Yes | Yes, after restoration |
 
-Cloud availability depends on successful authentication, network connectivity, and the configured cloud service.
+## Authentication and access
+
+ANAS Cloud session operations use account-based authentication.
+
+Protected cloud requests require a valid CLI access token.
+
+CLI access tokens have a 30-day expiration period.
+
+The backend uses the authenticated account to determine access to protected cloud resources.
+
+Cloud session access should not be confused with local conversation history.
+
+See [ANAS Cloud](/docs/guides/anas-cloud) and [Security](/docs/guides/security).
+
+## Sessions and agent memory
+
+Sessions store conversation messages.
+
+Agent memory stores information intended to remain useful beyond a single conversation.
+
+These systems serve different purposes.
+
+| Sessions | Agent memory |
+| --- | --- |
+| Store conversation history | Store reusable context |
+| Track individual conversations | Can be shared across conversations |
+| Support resuming chats | Supports retaining relevant information |
+| May synchronize to ANAS Cloud | Has separate cloud integration |
+
+ANAS CLI includes a cloud memory endpoint.
+
+However, the existence of this endpoint does not guarantee that automatic memory retrieval is fully integrated into every provider's agent loop.
+
+See [Memory](/docs/guides/memory).
 
 ## Session commands
 
-| Command    | Description                                             |
-| ---------- | ------------------------------------------------------- |
-| `/new`     | Create and activate a new session.                      |
-| `/history` | List sessions available locally in the current process. |
-| `/resume`  | Choose an eligible local or cloud session to resume.    |
-| `/exit`    | Exit the interactive chat session.                      |
-| `/help`    | Display available slash commands.                       |
+| Command | Description |
+| --- | --- |
+| `/new` | Create and activate a new session. |
+| `/history` | List locally available sessions. |
+| `/resume` | Resume an eligible local or cloud session. |
+| `/exit` | Exit the interactive chat. |
+| `/help` | Display available slash commands. |
 
 ## Important limitations
 
-* **Local persistence:** Local sessions are not automatically written to disk.
-* **Process lifetime:** Local session history is lost when the process exits.
-* **Cloud login:** Cloud session listing and restoration require authentication.
-* **Network dependency:** Cloud operations can fail if the service or network is unavailable.
-* **Cloud sync timing:** Synchronization is attempted after chat processing; it is not a guarantee that every message was successfully saved.
-* **Memory is separate:** Agent memory is shared across sessions in the current process and may synchronize through the cloud. It is not the same as session conversation history.
+### Local persistence
+
+Local sessions are not automatically saved to a persistent local database.
+
+### Process lifetime
+
+Local session history is lost when the CLI process exits unless the conversation was successfully saved to ANAS Cloud.
+
+### Cloud authentication
+
+Cloud session listing and restoration require valid authentication.
+
+### Network dependency
+
+Cloud operations depend on the configured backend and network connectivity.
+
+### Synchronization timing
+
+Cloud synchronization is attempted after chat processing.
+
+This does not guarantee that every message was successfully saved.
+
+### Cloud availability
+
+A session must have been successfully synchronized before it can reliably be restored from ANAS Cloud.
+
+### Memory separation
+
+Agent memory is not the same as conversation history.
+
+Cloud memory integration should be verified independently from cloud session synchronization.
 
 ## Related documentation
 
-* [Quickstart](/docs/getting-started/quickstart) — start your first chat.
-* [CLI Commands](/docs/reference/commands) — explore available commands.
-* [AI Providers](/docs/configuration/providers) — configure provider credentials.
-* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.
+- [Quickstart](/docs/getting-started/quickstart) — start your first session.
+- [ANAS Cloud](/docs/guides/anas-cloud) — explore cloud services.
+- [Memory](/docs/guides/memory) — understand agent memory.
+- [CLI Commands](/docs/reference/commands) — explore commands.
+- [AI Providers](/docs/configuration/providers) — configure provider credentials.
+- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+- [Security](/docs/guides/security) — learn about cloud authentication and protection.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

@@ -5,19 +5,27 @@ description: Learn how to select, switch, and use ANAS CLI interaction modes.
 
 # Ask, Agent, and Plan Modes
 
-ANAS CLI provides three interaction modes: **Ask**, **Agent**, and **Plan**. Each mode supports a different approach to coding tasks.
+ANAS CLI provides three interaction modes: **Ask**, **Agent**, and **Plan**.
+
+Each mode has different capabilities and tool permissions.
 
 ## Select a mode
 
-Use the `--mode` option when starting an interactive chat:
+Start an interactive chat using the `--mode` option.
+
+### Ask mode
 
 ```bash
 npm run dev -- chat --mode ask
 ```
 
+### Agent mode
+
 ```bash
 npm run dev -- chat --mode agent
 ```
+
+### Plan mode
 
 ```bash
 npm run dev -- chat --mode plan
@@ -27,63 +35,108 @@ The default mode is `agent`.
 
 ## Ask mode
 
-Use Ask mode to explore your codebase, understand existing code, and discuss implementation ideas without making changes.
+Ask mode is designed for understanding and exploring your codebase without modifying files.
 
-**Example prompts**
+Example prompts:
 
-* Explain how this function works.
-* What does this error mean?
-* How could this module be simplified?
+- Explain how this function works.
+- Find where this API endpoint is defined.
+- What does this error mean?
+- Explain the authentication flow.
+- Search for references to this function.
 
-Ask mode provides read-only access to these tools:
+### Available tools
 
-* `read_file`
-* `search_code`
-* `glob`
-* `list_dir`
+- `read_file`
+- `search_code`
+- `glob`
+- `list_dir`
 
-File-writing, editing, terminal, and Git tools are not available through Ask mode's tool allowlist.
+Ask mode cannot invoke file-writing, editing, terminal, or Git tools through its tool allowlist.
+
+Use Ask mode when you want to investigate a project without making changes.
 
 ## Agent mode
 
-Use Agent mode when you want assistance carrying out a coding task.
+Agent mode is designed for carrying out coding tasks.
 
-**Example prompts**
+Example prompts:
 
-* Help me implement input validation.
-* Find where this function is called.
-* Help me fix this failing test.
+- Implement input validation.
+- Fix this failing test.
+- Create a new API endpoint.
+- Refactor this component.
+- Find and fix a bug.
+
+### Available tools
 
 Agent mode can access all eight registered tools:
 
-* `read_file`
-* `write_file`
-* `edit_file`
-* `bash`
-* `glob`
-* `list_dir`
-* `search_code`
-* `git`
+| Tool | Purpose |
+| --- | --- |
+| `read_file` | Read project files. |
+| `write_file` | Create or overwrite files. |
+| `edit_file` | Modify existing files. |
+| `bash` | Execute Windows CMD commands. |
+| `glob` | Find files matching patterns. |
+| `list_dir` | Inspect directories. |
+| `search_code` | Search project code. |
+| `git` | Inspect Git repository information. |
 
-Access is subject to permission checks and safety guardrails. ANAS CLI requests confirmation before executing terminal commands or file-writing and editing operations.
+### Permissions
 
-Review generated changes and command results before relying on them.
+ANAS CLI requests confirmation before:
+
+- Executing terminal commands
+- Creating or overwriting files
+- Editing existing files
+
+Additional safety checks include:
+
+- Workspace-boundary restrictions
+- Protected files and directories
+- Restricted package-management files
+- Destructive-command guardrails
+- Repeated tool-failure protection
+- Secret redaction for detected sensitive content
+
+Permission approval does not automatically bypass these restrictions.
+
+See [Tools & Permissions](/docs/reference/tools).
 
 ## Plan mode
 
-Use Plan mode to explore an implementation approach before proceeding with a coding task.
+Plan mode is designed for discussing an implementation approach before making changes.
 
-**Example prompts**
+Example prompts:
 
-* Outline the steps to add authentication.
-* Identify which modules need to change for this feature.
-* Propose an approach for handling API errors.
+- Outline the steps to add authentication.
+- Design a database schema for this feature.
+- Explain how to migrate this project to TypeScript.
+- Propose an implementation strategy.
 
-Plan mode currently has no tools enabled through its tool allowlist. Use it to discuss and develop an implementation approach before switching to Agent mode to carry out changes.
+Plan mode currently has no registered tools enabled.
+
+It can produce an implementation plan, but it cannot inspect or modify files through the tool system.
+
+Use Agent mode when you're ready to implement the plan.
+
+## Tool access comparison
+
+| Capability | Ask | Agent | Plan |
+| --- | --- | --- | --- |
+| Answer questions | Yes | Yes | Yes |
+| Read project files using tools | Yes | Yes | No |
+| Search project code using tools | Yes | Yes | No |
+| Create files | No | Yes, with permission | No |
+| Edit files | No | Yes, with permission | No |
+| Execute terminal commands | No | Yes, with permission | No |
+| Inspect Git using tools | No | Yes | No |
+| Generate implementation plans | Yes | Yes | Yes |
 
 ## Switch modes during a session
 
-You can change the interaction mode without starting a new CLI process by entering a slash command in the interactive chat.
+You can change modes without restarting ANAS CLI.
 
 Switch to Ask mode:
 
@@ -103,21 +156,58 @@ Switch to Plan mode:
 /mode plan
 ```
 
-To view the available slash commands, enter:
+Display available slash commands:
 
 ```text
 /help
 ```
 
-## Implementation notes
+Switching modes changes which tools are available for subsequent interactions.
 
-The one-shot `talk` command sends a prompt directly to the agent and does not currently accept a `--mode` option.
+## ANAS Cloud and interaction modes
 
-Tool access and permissions differ by mode. Agent mode has broader tool access, but operations can still be blocked by permission checks or safety guardrails.
+ANAS Cloud authentication and local interaction modes are separate systems.
 
-## What's next?
+Cloud authentication determines whether you can access protected cloud services.
 
-* [Quickstart](/docs/getting-started/quickstart) — launch an interactive session.
-* [AI Providers](/docs/guides/ai-providers) — configure your preferred provider.
-* [Tools & Permissions](/docs/guides/tools-and-permissions) — understand tool access and safety restrictions.
-* [CLI Commands](/docs/reference/commands) — explore available commands and options.
+Interaction modes determine which local coding tools the agent can use.
+
+ANAS Cloud currently includes an OpenAI integration using `gpt-4o`, supporting standard responses, streaming, and tool-call responses.
+
+A cloud model returning a tool call does not automatically authorize its execution.
+
+The CLI must still enforce the selected mode's tool restrictions, permission prompts, and safety guardrails.
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+See [ANAS Cloud](/docs/guides/anas-cloud) and [Security](/docs/guides/security).
+
+## One-shot prompts
+
+The `talk` command sends a single prompt without starting an interactive chat session.
+
+```bash
+npm run dev -- talk "Explain this project"
+```
+
+The `talk` command does not currently accept a `--mode` option.
+
+For explicit mode selection, use `chat --mode`.
+
+## Important limitations
+
+- Ask mode is read-only through its registered tool allowlist.
+- Agent mode can modify files, but permission checks and guardrails still apply.
+- Plan mode currently has no registered tools.
+- Tool results should be treated as untrusted data.
+- Agent responses should distinguish verified tool results from assumptions.
+- A successful cloud login does not grant additional local tool permissions.
+
+## Related documentation
+
+- [Quickstart](/docs/getting-started/quickstart)
+- [Tools & Permissions](/docs/reference/tools)
+- [AI Providers](/docs/configuration/providers)
+- [ANAS Cloud](/docs/guides/anas-cloud)
+- [Security](/docs/guides/security)
+- [CLI Commands](/docs/reference/commands)

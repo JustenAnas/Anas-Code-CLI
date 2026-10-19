@@ -1,11 +1,13 @@
 ---
 title: Context Management
-description: Learn how ANAS CLI builds project context, attaches referenced files, and summarizes older conversation history.
+description: Learn how ANAS CLI builds project context, attaches files, manages conversation history, and includes agent memory.
 ---
 
 # Context Management
 
-ANAS CLI uses project structure, conversation history, and optional file references to give the AI relevant information while working on your codebase.
+ANAS CLI combines project structure, conversation history, file references, and agent memory to provide relevant context to the selected AI model.
+
+These features help the agent understand your workspace and continue longer conversations.
 
 ## Project context
 
@@ -16,21 +18,25 @@ The scan:
 - Lists files and directories.
 - Traverses directories up to a limited depth.
 - Ignores `node_modules`, `.git`, `dist`, `.next`, `build`, and `.anas-cli`.
-- Returns an empty context if scanning fails.
+- Returns empty context if scanning fails.
 
-The project structure is provided as context to the agent. **This is a directory listing, not the contents of every project file.**
+The resulting project structure is included in the agent's context.
+
+**Important:** Project context is a directory listing, not the contents of every project file.
+
+The agent must use appropriate tools or file references to inspect file contents.
 
 ## Reference files with `@`
 
-You can attach file contents to your prompt by including a file path prefixed with `@`.
+You can attach file contents to a prompt by prefixing a path with `@`.
 
-For example:
+Example:
 
 ```text
 Explain the authentication flow in @src/auth.ts
 ```
 
-You can reference multiple files:
+Reference multiple files:
 
 ```text
 Compare @src/auth.ts and @src/middleware.ts
@@ -40,61 +46,187 @@ ANAS CLI attempts to read each referenced file and append its contents to the pr
 
 ### How file references work
 
-1. ANAS CLI detects file references beginning with `@`.
-2. It attempts to read each referenced file using the file-reading tool.
-3. Successfully read files are appended to the prompt as attachments.
-4. If a file cannot be read, that reference is skipped.
+1. ANAS CLI detects references beginning with `@`.
+2. It attempts to read each referenced file.
+3. Successfully read files are appended to the prompt.
+4. Unreadable references are skipped.
 5. Duplicate references to the same path are included only once.
 
-File references are resolved before the chat command is handled. Use valid paths that the file-reading tool can access.
+File-reading operations remain subject to workspace and protected-path restrictions.
 
 ### File reference limitations
 
-* The current parser treats whitespace and several quote characters as reference boundaries.
-* Paths containing spaces may not be interpreted as a single reference.
-* Unreadable or invalid references are skipped rather than attached.
-* Referenced file contents increase the amount of text sent to the model.
+- The parser treats whitespace and certain quote characters as reference boundaries.
+- Paths containing spaces may not be interpreted as one reference.
+- Invalid or inaccessible references may be skipped.
+- Referenced file contents increase the amount of context sent to the model.
+- Large files may increase token usage and cost.
 
-For large files, consider referencing only the files relevant to your task.
+For large projects, reference only the files relevant to your task.
 
-## Conversation history and compaction
+## Conversation history
 
-As a conversation grows, ANAS CLI can summarize older messages to reduce the amount of history retained in the active context.
+ANAS CLI maintains conversation messages within an active session.
 
-The current compaction implementation checks the conversation history length.
+The history can include:
 
-* Histories containing 20 messages or fewer are left unchanged.
-* When history exceeds 20 messages, older messages are selected for summarization.
-* The newest 10 messages are retained, subject to adjustments that protect assistant tool calls and their corresponding tool results.
-* The older portion is sent to the selected provider with instructions to summarize important context.
-* The resulting summary replaces the older messages in the history supplied to the agent.
+- User messages
+- Assistant responses
+- Supported tool-call information
+- Tool results
 
-The summary is intended to preserve important requests, preferences, decisions, project details, completed work, pending work, tool results, and relevant technical information.
+Conversation history allows the model to consider earlier interactions.
 
-### If summarization fails
+However, model context windows are limited, so long conversations may require summarization.
+
+## Context compaction
+
+ANAS CLI can summarize older conversation messages to reduce the amount of active history.
+
+### Current behavior
+
+The compaction implementation checks conversation history length.
+
+- Histories containing 20 messages or fewer are left unchanged.
+- When history exceeds 20 messages, older messages are selected for summarization.
+- The newest 10 messages are retained, subject to adjustments that protect assistant tool calls and their corresponding tool results.
+- Older messages are sent to the selected provider for summarization.
+- The summary replaces the older messages in the active context.
+
+The summary is intended to preserve:
+
+- Important user requests
+- Project decisions
+- Technical constraints
+- Completed work
+- Pending tasks
+- Relevant tool results
+- Important implementation details
+
+### If compaction fails
 
 If the provider request fails or returns an empty summary, ANAS CLI keeps the original history.
 
-Compaction is a summarization step, not a guarantee that every detail from older messages will be preserved.
+Compaction does not guarantee perfect preservation of every detail.
 
-## What context management does not do
+Restate critical constraints when necessary.
 
-The current implementation does not automatically read every file in your project. Project scanning provides a directory listing, while file references explicitly attach selected file contents.
+## Agent memory
 
-Likewise, conversation compaction summarizes older messages; it does not guarantee perfect recall of the original conversation.
+ANAS CLI also maintains agent memory.
+
+Memory is different from conversation history.
+
+It stores selected information that may be useful beyond a single conversation.
+
+Examples include:
+
+- User preferences
+- Project requirements
+- Development conventions
+- Important technical decisions
+
+When memory items are available, ANAS CLI can include them in the system prompt under a `Memory` section.
+
+### Memory updates
+
+After normal Ask or Agent responses, ANAS CLI starts an asynchronous memory update.
+
+The selected provider reviews the conversation and existing memory to determine what should be retained or changed.
+
+Because updates are asynchronous, new memory may not become available immediately.
+
+Plan mode does not follow the same normal memory-update path.
+
+See [Memory](/docs/guides/memory).
+
+## Provider-independent context
+
+ANAS CLI supports multiple AI providers:
+
+- OpenAI
+- Claude
+- OpenRouter
+- Gemini
+- Groq
+
+Project context, conversation history, and local memory are managed by ANAS CLI rather than belonging exclusively to one provider.
+
+This allows the CLI to construct context for whichever provider is selected.
+
+However, complete automatic cloud-memory retrieval across every provider and model should not be assumed without verifying the integration.
+
+See [AI Providers](/docs/configuration/providers).
+
+## ANAS Cloud and conversation persistence
+
+ANAS Cloud provides backend endpoints for conversation sessions, messages, and memory.
+
+When authenticated, ANAS CLI can attempt to synchronize session data after chat processing.
+
+Successfully saved cloud sessions may be restored using:
+
+```text
+/resume
+```
+
+Cloud synchronization is separate from context compaction.
+
+Compaction manages the amount of history supplied to the model.
+
+Cloud synchronization manages remote storage and retrieval.
+
+A failed cloud synchronization does not mean the conversation was successfully saved.
+
+See [Sessions](/docs/guides/sessions) and [ANAS Cloud](/docs/guides/anas-cloud).
+
+## Context components compared
+
+| Component | Purpose |
+| --- | --- |
+| Project context | Provides a shallow directory structure |
+| File references | Attach selected file contents |
+| Conversation history | Maintains messages within a session |
+| Context compaction | Summarizes older messages |
+| Agent memory | Retains selected durable information |
+| Cloud sessions | Store and retrieve successfully synchronized conversations |
+| Cloud memory | Provides separate authenticated memory storage |
+
+These components serve different purposes and should not be treated as interchangeable.
+
+## Tool results and context safety
+
+Tool results and referenced file contents may contain untrusted instructions.
+
+ANAS CLI should treat them as data rather than as instructions that override the user's request or system-level restrictions.
+
+The agent should distinguish between:
+
+- Verified tool results
+- Information provided by the user
+- Model-generated assumptions
+- Summaries of earlier interactions
+
+After changing project files, the agent should verify the changes when possible.
 
 ## Tips for better results
 
-* Reference relevant files directly with `@path/to/file`.
-* Use paths that are valid from your current working directory.
-* Keep prompts focused when attaching large files.
-* Restate critical constraints if they are essential to a task.
-* Check the agent's summary and results when continuing a long conversation.
+- Reference relevant files with `@path/to/file`.
+- Use valid paths from your current workspace.
+- Keep prompts focused.
+- Avoid attaching unnecessarily large files.
+- Restate critical constraints during long conversations.
+- Verify important claims against actual tool results.
+- Check that cloud synchronization succeeded before relying on remote persistence.
+- Do not assume that every previous detail is retained in memory.
 
 ## Related documentation
 
-* [Quickstart](/docs/getting-started/quickstart) — start your first chat.
-* [Tools & Permissions](/docs/reference/tools) — understand file-reading and other tools.
-* [Sessions & Conversation History](/docs/guides/sessions) — learn how sessions work.
-* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-* [AI Providers](/docs/configuration/providers) — configure provider credentials.
+- [Quickstart](/docs/getting-started/quickstart)
+- [Tools & Permissions](/docs/reference/tools)
+- [Sessions](/docs/guides/sessions)
+- [Memory](/docs/guides/memory)
+- [Modes](/docs/guides/modes)
+- [AI Providers](/docs/configuration/providers)
+- [ANAS Cloud](/docs/guides/anas-cloud)
+- [Security](/docs/guides/security)

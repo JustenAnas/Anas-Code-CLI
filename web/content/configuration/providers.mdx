@@ -1,59 +1,67 @@
 ---
 title: AI Providers
-description: Configure Claude, OpenAI, OpenRouter, Gemini, and Groq for ANAS CLI.
+description: Configure OpenAI, Claude, OpenRouter, Gemini, Groq, and ANAS Cloud provider credentials.
 ---
 
 # AI Providers
 
-ANAS CLI supports five AI providers. Configure the API key for your preferred provider to start using its models.
+ANAS CLI supports five AI providers: OpenAI, Claude, OpenRouter, Gemini, and Groq.
+
+You can configure provider credentials locally or use supported ANAS Cloud functionality.
 
 ## Supported providers
 
-| Provider   | Environment variable |
-| ---------- | -------------------- |
-| Claude     | `ANTHROPIC_API_KEY`  |
-| OpenAI     | `OPENAI_API_KEY`     |
+| Provider | Environment variable |
+| --- | --- |
+| OpenAI | `OPENAI_API_KEY` |
+| Claude | `ANTHROPIC_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini     | `GEMINI_API_KEY`     |
-| Groq       | `GROQ_API_KEY`       |
+| Gemini | `GEMINI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
 
-## 1. Configure your API key
+OpenAI is the default provider.
 
-Create a `.env` file in the project root and add the key for the provider you want to use.
+All five providers support local configuration. Cloud execution support is separate and should not be assumed to be available for every provider.
 
-**Claude**
+## 1. Configure a local API key
 
-```bash
-ANTHROPIC_API_KEY=your_anthropic_api_key
-```
+Create a `.env` file in your ANAS CLI project root and add the credential for your preferred provider.
 
-**OpenAI**
+### OpenAI
 
-```bash
+```env
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-**OpenRouter**
+### Claude
 
-```bash
+```env
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+### OpenRouter
+
+```env
 OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-**Gemini**
+### Gemini
 
-```bash
+```env
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-**Groq**
+### Groq
 
-```bash
+```env
 GROQ_API_KEY=your_groq_api_key
 ```
 
-Replace the placeholder with your actual API key. You only need to configure credentials for the provider you intend to use.
+Replace the placeholder with your actual credential.
 
-**Security reminder:** Never commit your `.env` file to version control or share your API keys publicly.
+You only need to configure credentials for the providers you intend to use.
+
+Never commit your `.env` file to Git or share your API keys publicly.
 
 ## 2. Select a provider
 
@@ -63,25 +71,33 @@ Start the guided setup:
 npm run dev -- wakeup
 ```
 
-ANAS CLI checks the environment, prompts you to select a provider, and validates that provider's API key.
+ANAS CLI checks your environment and guides you through provider and interaction-mode selection.
 
-The supported provider identifiers are:
+Supported provider identifiers:
 
-* `claude`
-* `openai`
-* `openrouter`
-* `gemini`
-* `groq`
+- `openai`
+- `claude`
+- `openrouter`
+- `gemini`
+- `groq`
 
 Your provider selection is saved in the CLI configuration.
 
-### Choose an OpenRouter model
+### OpenRouter model selection
 
-When you select OpenRouter through `wakeup`, ANAS CLI fetches available text-only models that support tool calling and lets you choose one.
+When you select OpenRouter, ANAS CLI fetches eligible text models that support tool calling.
 
-The model picker displays the model name, ID, and available input/output pricing information. Free models are labelled accordingly.
+The model picker displays available information including:
 
-If no eligible models are found or the model list cannot be loaded, the setup reports an error.
+- Model name
+- Model identifier
+- Input pricing
+- Output pricing
+- Free-model labels when applicable
+
+Model availability and pricing are controlled by OpenRouter and can change.
+
+If the model list cannot be retrieved or no eligible models are found, the CLI reports an error.
 
 ## 3. Check your environment
 
@@ -91,45 +107,183 @@ Run:
 npm run dev -- doctor
 ```
 
+The doctor command checks that Node.js is version 18 or higher and reports whether credentials are configured for each supported provider.
 
-This command checks that Node.js is version 18 or higher and reports whether an API key is configured for each supported provider.
+A configured key does not necessarily mean that the key is valid, has access to the selected model, or has available credits.
 
-It checks for configured keys; this does not necessarily verify that every key is valid or has sufficient credits.
+## 4. ANAS Cloud authentication
 
+ANAS Cloud provides authenticated services for ANAS CLI.
 
-## ANAS Cloud API keys
+Sign in:
 
-ANAS CLI supports saving an OpenAI API key through its
-authenticated cloud backend.
+```bash
+npm run dev -- login
+```
 
-The backend encrypts saved keys using AES-256-GCM
-before storing them in the database.
+After successful authentication, ANAS CLI saves a cloud access token in its local configuration.
 
-Cloud requests use the key associated with the
-authenticated user. The saved key is not returned
-to the CLI through the cloud chat endpoint.
+Protected cloud requests use this token to identify the authenticated user.
 
-The OpenAI cloud chat endpoint also enforces
-30 requests per minute per authenticated user.
+CLI access tokens expire after 30 days.
 
-This limit does not guarantee a maximum API bill.
-Monitor your provider usage and billing settings.
+Sign out:
+
+```bash
+npm run dev -- logout
+```
+
+See [ANAS Cloud](/docs/guides/anas-cloud) for details.
+
+## 5. Cloud provider-key management
+
+ANAS Cloud supports storing provider credentials through authenticated backend endpoints.
+
+Available operations include:
+
+| Operation | Description |
+| --- | --- |
+| Check | Determine whether a provider key is saved. |
+| Save | Save or replace a provider key. |
+| Delete | Delete a saved provider key. |
+
+### Encryption
+
+Saved provider keys are encrypted using **AES-256-GCM** before database storage.
+
+The backend uses an encryption key configured on the server.
+
+Each provider-key record is associated with its authenticated user.
+
+The cloud chat endpoint does not return the saved provider key to the CLI.
+
+### Local vs cloud credentials
+
+| Local configuration | ANAS Cloud |
+| --- | --- |
+| Uses environment variables | Uses authenticated cloud storage |
+| Key is configured on your machine | Key is encrypted in the cloud database |
+| Local provider integration sends requests using the configured key | Cloud backend sends supported provider requests |
+| No cloud login required for local configuration | Cloud authentication required |
+
+Cloud storage is optional for users who prefer local provider configuration.
+
+## 6. Cloud OpenAI
+
+ANAS CLI includes an authenticated cloud OpenAI integration.
+
+The cloud endpoint currently uses:
+
+```text
+gpt-4o
+```
+
+Supported capabilities include:
+
+- Standard AI responses
+- Streaming AI responses
+- Tool-call responses
+- Token usage reporting when available
+
+### How cloud requests work
+
+1. The CLI sends an authenticated request to ANAS Cloud.
+2. The backend validates the CLI access token.
+3. The backend applies the per-user rate limit.
+4. The backend retrieves the authenticated user's encrypted OpenAI key.
+5. The key is decrypted server-side.
+6. The backend sends the request to OpenAI.
+7. The response is returned to the CLI.
+
+The saved OpenAI API key is not included in the cloud chat response.
+
+### Rate limiting
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+When the limit is exceeded, the endpoint returns HTTP `429` and a `Retry-After` header.
+
+This limit was tested locally against the MongoDB counter and HTTP endpoint.
+
+Rate limiting is not a spending cap. Users remain responsible for monitoring their OpenAI usage and billing.
+
+### Other providers
+
+Claude, OpenRouter, Gemini, and Groq are supported through local provider integrations.
+
+Their availability through cloud execution should not be assumed from local provider support.
+
+## 7. Troubleshooting
+
+### Local API key not detected
+
+Check that:
+
+- Your `.env` file is in the correct project directory.
+- The environment variable matches the selected provider.
+- The key is configured without unintended spaces or quotation marks.
+- You restarted the CLI after changing the environment.
+
+### Invalid API key
+
+Verify the credential in your provider account and check whether it has been revoked or expired.
+
+### Insufficient credits or quota
+
+Check your provider's billing settings, available credits, and usage limits.
+
+### OpenRouter model unavailable
+
+Choose another eligible model and verify that it supports the required tool-calling capabilities.
+
+### Cloud authentication failed
+
+Run:
+
+```bash
+npm run dev -- login
+```
+
+Ensure you are signing in to the correct ANAS Cloud account.
+
+### HTTP 401 — Unauthorized
+
+The cloud token may be missing, invalid, revoked, or expired.
+
+Sign in again to obtain a new token.
+
+### HTTP 429 — Rate limit exceeded
+
+Wait for the interval indicated by the `Retry-After` header before retrying.
+
+### Cloud provider key missing
+
+Ensure the required provider key is saved under the same authenticated ANAS Cloud account.
+
+### Cloud streaming interrupted
+
+Check your network connection and backend availability.
+
+An interrupted stream may not include final token-usage information.
+
+For more help, see [Common Errors](/docs/troubleshooting/common-errors).
+
+## Security considerations
+
+- Never expose provider credentials in public repositories.
+- Do not share CLI authentication tokens.
+- Keep local configuration files private.
+- Review provider usage and billing regularly.
+- Treat cloud rate limits as request controls, not spending guarantees.
+- Understand that the backend must decrypt a saved key to send requests to the provider.
 
 See [Security](/docs/guides/security) for details.
 
-
-## 4. Troubleshoot API key issues
-
-If you encounter a provider or connection error:
-
-1. Confirm that your `.env` file is in the project root.
-2. Check that the environment variable matches your selected provider.
-3. Verify that the API key is valid and has the required access or credits.
-4. For OpenRouter, check that the selected model is available and supports tool calling.
-5. Read the error message and check the provider's service status if needed.
-
 ## What's next?
 
-* [Quickstart](/docs/getting-started/quickstart) — launch your first session.
-* [Modes](/docs/guides/modes) — explore Ask, Agent, and Plan modes.
-* [CLI Commands](/docs/reference/commands) — see available commands and options.
+- [Quickstart](/docs/getting-started/quickstart) — launch your first session.
+- [ANAS Cloud](/docs/guides/anas-cloud) — learn about cloud authentication and services.
+- [Modes](/docs/guides/modes) — explore Ask, Agent, and Plan modes.
+- [CLI Commands](/docs/reference/commands) — see available commands and options.
+- [Security](/docs/guides/security) — understand authentication, encryption, and rate limiting.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot provider and cloud issues.

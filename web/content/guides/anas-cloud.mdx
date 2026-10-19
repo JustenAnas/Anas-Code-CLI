@@ -1,0 +1,120 @@
+---
+title: ANAS Cloud
+description: Cloud authentication, AI providers, API keys, sessions, and memory.
+---
+
+# ANAS Cloud
+
+ANAS Cloud connects ANAS CLI to account-based services, including authentication, encrypted provider-key storage, cloud AI requests, sessions, and memory.
+
+## Authentication
+
+Sign in to your ANAS Cloud account:
+
+```bash
+npm run dev -- login
+```
+
+After successful authentication, ANAS CLI stores a cloud access token in its local configuration.
+
+Sign out:
+
+```bash
+npm run dev -- logout
+```
+
+CLI access tokens expire after 30 days. The backend stores SHA-256 hashes of these tokens rather than plaintext values.
+
+Browser sessions and CLI tokens use separate authentication mechanisms.
+
+## Cloud API Keys
+
+ANAS Cloud provides authenticated endpoints for managing provider credentials.
+
+Supported operations include:
+
+- Check whether a provider key exists.
+- Save or replace a provider key.
+- Delete a saved provider key.
+
+Provider keys are encrypted using AES-256-GCM before being stored in the database.
+
+Each key belongs to its authenticated user. A user cannot retrieve another user's saved credentials through the provider-key API.
+
+Cloud API keys are separate from API keys configured locally through environment variables.
+
+## Cloud OpenAI
+
+ANAS CLI includes a cloud OpenAI integration.
+
+The cloud backend currently uses the `gpt-4o` model.
+
+Supported capabilities include:
+
+- Standard AI responses
+- Streaming responses
+- Tool-call responses
+- Token usage reporting when available
+
+The backend retrieves and decrypts the authenticated user's saved OpenAI key server-side.
+
+The saved key is not returned to the CLI during cloud chat requests.
+
+Other locally supported providers are not necessarily available through the cloud execution endpoint.
+
+## Rate Limiting
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+When the limit is exceeded, the API returns:
+
+- HTTP status `429`
+- A `Retry-After` response header
+- An error explaining that the rate limit was exceeded
+
+The limit is enforced using MongoDB and has passed local counter and HTTP endpoint tests.
+
+Rate limiting reduces request frequency but does not guarantee a maximum API bill.
+
+## Cloud Sessions
+
+ANAS Cloud includes backend endpoints for storing conversation sessions and messages.
+
+These endpoints support the architecture for synchronizing conversations between the CLI and cloud services.
+
+Local conversation history and cloud synchronization are separate. A conversation should only be considered synchronized after successful confirmation from the cloud service.
+
+See [Sessions](/docs/guides/sessions).
+
+## Cloud Memory
+
+ANAS Cloud includes a memory API endpoint.
+
+The goal is provider-independent memory, allowing user-specific information to remain available when switching between AI providers and models.
+
+The presence of the memory endpoint does not establish that automatic memory retrieval is fully integrated into every CLI agent workflow.
+
+See [Memory](/docs/guides/memory).
+
+## Security
+
+ANAS Cloud uses multiple safeguards:
+
+- Authenticated access to protected cloud endpoints
+- Hashed CLI access tokens
+- Encrypted provider-key storage
+- User-scoped database operations
+- Per-user cloud AI rate limiting
+
+Additional protections, including spending safeguards and improved request timeout handling, remain areas for further development.
+
+Read the [Security guide](/docs/guides/security) for more information.
+
+## Related Documentation
+
+- [Quickstart](/docs/getting-started/quickstart)
+- [AI Providers](/docs/configuration/providers)
+- [CLI Commands](/docs/reference/commands)
+- [Sessions](/docs/guides/sessions)
+- [Memory](/docs/guides/memory)
+- [Security](/docs/guides/security)

@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Start your first ANAS CLI session and explore its core commands.
+description: Get started with ANAS CLI, AI providers, coding modes, and ANAS Cloud.
 ---
 
 # Quickstart
 
-Get your first ANAS CLI session running. You can check your environment, use guided setup, choose an operating mode, or send a one-shot prompt.
+Get ANAS CLI running, configure an AI provider, start coding, and explore ANAS Cloud.
 
 ## 1. Check your setup
 
@@ -17,6 +17,8 @@ npm run dev -- doctor
 
 The doctor command checks that Node.js is version 18 or higher and reports whether API keys are configured for Claude, OpenAI, OpenRouter, Gemini, and Groq.
 
+It checks whether credentials are configured, not whether they are valid or have sufficient credits.
+
 ## 2. Start the guided experience
 
 Run:
@@ -27,11 +29,19 @@ npm run dev -- wakeup
 
 The guided startup displays the welcome banner, checks the environment, and lets you select a provider and interaction mode.
 
+ANAS CLI supports:
+
+- OpenAI
+- Claude
+- OpenRouter
+- Gemini
+- Groq
+
 If you select OpenRouter, ANAS CLI fetches eligible text models that support tool calling and lets you choose one.
 
 Your provider and mode selections are saved in the CLI configuration.
 
-To display token usage and estimated cost, use:
+To display token usage and estimated cost when available:
 
 ```bash
 npm run dev -- wakeup --verbose
@@ -49,27 +59,42 @@ You can also choose a mode explicitly.
 
 ### Ask mode
 
-Explore your codebase and ask questions without making changes.
+Explore your codebase, read files, search code, and ask questions without modifying project files.
 
 ```bash
 npm run dev -- chat --mode ask
 ```
 
+Ask mode supports these read-only tools:
+
+- `read_file`
+- `search_code`
+- `glob`
+- `list_dir`
+
 ### Plan mode
 
-Discuss an implementation approach before making changes. Plan mode currently has no tools enabled.
+Discuss an implementation approach before making changes.
 
 ```bash
 npm run dev -- chat --mode plan
 ```
 
+Plan mode currently has no registered tools enabled.
+
 ### Agent mode
 
-Work interactively with the coding agent. Tool access is subject to permission checks and safety guardrails.
+Work interactively with the coding agent.
 
 ```bash
 npm run dev -- chat --mode agent
 ```
+
+Agent mode can access all registered tools, subject to permission checks and safety guardrails.
+
+ANAS CLI requests confirmation before terminal commands and file-writing or editing operations.
+
+See [Modes](/docs/guides/modes) and [Tools & Permissions](/docs/reference/tools).
 
 ## 4. Send a one-shot prompt
 
@@ -81,7 +106,7 @@ npm run dev -- talk "Explain the structure of this project"
 
 This sends a prompt without starting an interactive chat session.
 
-To display token usage and estimated cost:
+To display token usage and estimated cost when supported:
 
 ```bash
 npm run dev -- talk "Explain this function" --verbose
@@ -101,50 +126,134 @@ Use `/help` to see the available slash commands.
 
 Other supported commands include:
 
-| Command    | Description                   |
-| ---------- | ----------------------------- |
-| `/new`     | Start a new conversation.     |
-| `/history` | View conversation history.    |
-| `/resume`  | Resume a conversation.        |
-| `/exit`    | Exit the interactive session. |
+| Command | Description |
+| --- | --- |
+| `/new` | Start a new conversation. |
+| `/history` | View conversation history. |
+| `/resume` | Resume a conversation. |
+| `/exit` | Exit the interactive session. |
 
 ## 6. Sign in to ANAS Cloud
 
-Use the following commands to manage your ANAS Cloud login:
+ANAS Cloud provides account-based services for ANAS CLI.
+
+Start the cloud login flow:
 
 ```bash
 npm run dev -- login
 ```
 
-Log out when needed:
+After successful authentication, ANAS CLI saves a cloud access token in its local configuration.
+
+The CLI uses this token when communicating with protected cloud endpoints.
+
+CLI tokens expire after 30 days. Browser sessions and CLI authentication use separate mechanisms.
+
+### Cloud provider keys
+
+ANAS Cloud supports authenticated provider-key management.
+
+The backend allows you to:
+
+- Check whether a provider key exists.
+- Save or replace a provider key.
+- Delete a saved provider key.
+
+Cloud provider keys are encrypted using AES-256-GCM before database storage.
+
+Each saved key is associated with the authenticated account.
+
+Local provider keys configured through environment variables remain a separate configuration option.
+
+See [AI Providers](/docs/configuration/providers).
+
+## 7. Use Cloud OpenAI
+
+ANAS CLI includes an authenticated cloud OpenAI integration.
+
+The cloud endpoint currently uses `gpt-4o` and supports:
+
+- Standard AI responses
+- Streaming responses
+- Tool-call responses
+- Token usage reporting when available
+
+The backend retrieves the authenticated user's saved OpenAI key and decrypts it server-side when processing a cloud request.
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+If you exceed this limit, the API returns HTTP `429` with a `Retry-After` header.
+
+This limit does not guarantee a maximum API bill.
+
+See [ANAS Cloud](/docs/guides/anas-cloud) and [Security](/docs/guides/security).
+
+## 8. Conversations and memory
+
+ANAS CLI provides commands for managing conversation history:
+
+```text
+/new
+/history
+/resume
+```
+
+ANAS Cloud also includes backend endpoints for conversation sessions and messages.
+
+Cloud synchronization should only be considered successful when the relevant operation has completed successfully.
+
+The cloud backend also includes a memory endpoint.
+
+Provider-independent memory is an intended capability, but automatic memory retrieval across all providers should not be assumed to be fully integrated.
+
+Learn more:
+
+- [Sessions](/docs/guides/sessions)
+- [Memory](/docs/guides/memory)
+
+## 9. Sign out of ANAS Cloud
+
+When you want to end your locally authenticated cloud session, run:
 
 ```bash
 npm run dev -- logout
 ```
 
+You can sign in again using `login`.
+
 ## More commands
 
-| Command  | Description                            |
-| -------- | -------------------------------------- |
-| `wakeup` | Launch guided setup.                   |
-| `chat`   | Start an interactive session.          |
-| `talk`   | Send a one-shot prompt.                |
+| Command | Description |
+| --- | --- |
+| `wakeup` | Launch guided setup. |
+| `chat` | Start an interactive session. |
+| `talk` | Send a one-shot prompt. |
 | `doctor` | Check Node.js and configured API keys. |
-| `login`  | Log in to ANAS Cloud.                  |
-| `logout` | Log out of ANAS Cloud.                 |
-| `banner` | Display the welcome banner.            |
-| `hello`  | Print a greeting.                      |
+| `login` | Log in to ANAS Cloud. |
+| `logout` | Log out of ANAS Cloud. |
+| `banner` | Display the welcome banner. |
+| `hello` | Print a greeting. |
 
-To see all available CLI commands and options, run:
+To see all available CLI commands and options:
 
 ```bash
 npm run dev -- --help
 ```
 
+To display the installed CLI version:
+
+```bash
+npm run dev -- --version
+```
+
 ## What's next?
 
-* [Installation](/docs/getting-started/installation) — set up ANAS CLI.
-* [AI Providers](/docs/guides/ai-providers) — configure your AI provider.
-* [Modes](/docs/guides/modes) — understand Ask, Plan, and Agent modes.
-* [Tools & Permissions](/docs/guides/tools-and-permissions) — understand tool access and safety restrictions.
-* [CLI Commands](/docs/reference/commands) — explore the complete command reference.
+- [Installation](/docs/getting-started/installation) — install and configure ANAS CLI.
+- [ANAS Cloud](/docs/guides/anas-cloud) — explore cloud authentication and AI features.
+- [AI Providers](/docs/configuration/providers) — configure your AI provider.
+- [Modes](/docs/guides/modes) — understand Ask, Plan, and Agent modes.
+- [Tools & Permissions](/docs/reference/tools) — understand tool access and safety restrictions.
+- [Sessions](/docs/guides/sessions) — manage conversation sessions.
+- [Memory](/docs/guides/memory) — understand memory capabilities.
+- [Security](/docs/guides/security) — review authentication, encryption, and rate limiting.
+- [CLI Commands](/docs/reference/commands) — explore the complete command reference.

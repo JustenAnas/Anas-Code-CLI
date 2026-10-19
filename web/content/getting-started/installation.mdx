@@ -1,85 +1,244 @@
 ---
 title: Installation
-description: Install, configure, and run ANAS CLI from source.
+description: Install ANAS CLI from npm or source, configure AI providers, and connect to ANAS Cloud.
 ---
 
 # Installation
 
-ANAS CLI currently runs from source code. Follow these steps to install dependencies, configure your environment, and launch the CLI.
+ANAS CLI is a TypeScript-based AI coding assistant that supports multiple AI providers, interactive coding modes, project tools, conversation sessions, and ANAS Cloud.
+
+You can install ANAS CLI through npm or run it directly from source.
 
 ## Prerequisites
 
-Before you begin, make sure you have:
+Before installing ANAS CLI, make sure you have:
 
 - [Node.js](https://nodejs.org/) version 18 or higher.
 - npm installed.
-- The ANAS CLI repository cloned to your machine.
+- An API key for your preferred AI provider if using local provider configuration.
+- An internet connection for AI provider requests and ANAS Cloud features.
 
-## 1. Open the project
+## 1. Install from npm
 
-Open your terminal in the root directory of the ANAS CLI repository.
+ANAS CLI is published on npm.
 
-All commands below should run from this directory, where the root `package.json` is located.
+Install it globally:
 
-## 2. Install dependencies
+```bash
+npm install -g anas-cli
+```
 
-Install the project dependencies:
+Verify that the CLI is available:
+
+```bash
+anas --help
+```
+
+Check the installed version:
+
+```bash
+anas --version
+```
+
+If the installed package exposes a different executable name, check its npm package metadata for the supported command.
+
+### Update ANAS CLI
+
+To install the latest published version:
+
+```bash
+npm install -g anas-cli@latest
+```
+
+## 2. Run from source
+
+If you want to contribute to ANAS CLI or work on its implementation, you can run it from source.
+
+### Clone the repository
+
+```bash
+git clone https://github.com/JustenAnas/anas-cli.git
+```
+
+Open the project directory:
+
+```bash
+cd anas-cli
+```
+
+If your repository is stored in another directory, use that location instead.
+
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-## 3. Configure environment variables
-
-ANAS CLI uses a root-level `.env` file for environment configuration.
-
-Add the API key for the provider you intend to use:
-
-| Provider   | Environment variable |
-| ---------- | -------------------- |
-| Claude     | `ANTHROPIC_API_KEY`  |
-| OpenAI     | `OPENAI_API_KEY`     |
-| OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini     | `GEMINI_API_KEY`     |
-| Groq       | `GROQ_API_KEY`       |
-
-For example, to configure OpenAI:
-
-```bash
-OPENAI_API_KEY=your_openai_api_key
-```
-
-Replace the placeholder with your actual API key. You do not need to configure every provider.
-
-Keep your API keys private. Never commit your `.env` file to Git or share your credentials publicly.
-
-## 4. Check your environment
-
-Run the environment check:
-
-```bash
-npm run dev -- doctor
-```
-
-This checks that Node.js is version 18 or higher and reports whether API keys are configured. It does not guarantee that the keys are valid or have sufficient credits.
-
-## 5. Start in development mode
-
-Run the CLI directly from its TypeScript source:
+### Start the development CLI
 
 ```bash
 npm run dev -- --help
 ```
 
-To launch the guided setup:
+The development command runs the TypeScript entry point through `tsx`.
+
+## 3. Configure a local AI provider
+
+ANAS CLI supports five providers.
+
+| Provider | Environment variable |
+| --- | --- |
+| OpenAI | `OPENAI_API_KEY` |
+| Claude | `ANTHROPIC_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Gemini | `GEMINI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+
+When running from source, create a `.env` file in the project root.
+
+For example:
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+```
+
+Replace the placeholder with your actual API key.
+
+You only need to configure the providers you intend to use.
+
+For a globally installed CLI, configure credentials using the environment setup supported by your installation rather than assuming that the source repository's `.env` file is available.
+
+Never commit API keys or `.env` files to version control.
+
+See [AI Providers](/docs/configuration/providers).
+
+## 4. Check your environment
+
+When running from source:
+
+```bash
+npm run dev -- doctor
+```
+
+For an npm installation using the `anas` executable:
+
+```bash
+anas doctor
+```
+
+The doctor command checks the Node.js version and reports which supported provider credentials are configured.
+
+It does not guarantee that every key is valid or has sufficient credits.
+
+## 5. Start ANAS CLI
+
+### Guided setup
+
+From source:
 
 ```bash
 npm run dev -- wakeup
 ```
 
-This command runs `src/index.ts` through `tsx`, so you can use the CLI without compiling it first.
+Using the installed CLI:
 
-## 6. Build for production
+```bash
+anas wakeup
+```
+
+Guided setup lets you choose an AI provider and interaction mode.
+
+### Interactive chat
+
+From source:
+
+```bash
+npm run dev -- chat
+```
+
+Using the installed CLI:
+
+```bash
+anas chat
+```
+
+Agent mode is the default.
+
+### Choose a mode
+
+```bash
+anas chat --mode ask
+```
+
+```bash
+anas chat --mode agent
+```
+
+```bash
+anas chat --mode plan
+```
+
+### One-shot prompt
+
+```bash
+anas talk "Explain this project"
+```
+
+See [Quickstart](/docs/getting-started/quickstart) for more examples.
+
+## 6. Connect to ANAS Cloud
+
+ANAS Cloud provides authenticated backend services for ANAS CLI.
+
+Sign in:
+
+```bash
+anas login
+```
+
+When running from source:
+
+```bash
+npm run dev -- login
+```
+
+After successful authentication, the CLI stores a cloud access token in its local configuration.
+
+CLI tokens expire after 30 days.
+
+### Cloud features
+
+ANAS Cloud includes:
+
+- CLI authentication
+- Encrypted provider-key storage
+- Authenticated OpenAI cloud requests
+- Streaming and tool-call response support
+- Cloud session endpoints
+- Cloud message endpoints
+- Cloud memory endpoints
+
+The cloud OpenAI integration currently uses `gpt-4o`.
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+Cloud functionality for other providers should not be assumed from local provider support.
+
+See [ANAS Cloud](/docs/guides/anas-cloud).
+
+### Sign out
+
+```bash
+anas logout
+```
+
+Or, from source:
+
+```bash
+npm run dev -- logout
+```
+
+## 7. Build from source
 
 Compile the TypeScript project:
 
@@ -87,18 +246,49 @@ Compile the TypeScript project:
 npm run build
 ```
 
-After a successful build, start the compiled application:
+After a successful build:
 
 ```bash
 npm start
 ```
 
-The production command runs `dist/index.js`. Make sure your TypeScript configuration emits the entry point to that location before using it.
+The production command runs the compiled entry point at `dist/index.js`.
+
+Ensure the build completes successfully before starting the compiled application.
+
+## Troubleshooting
+
+### Command not found
+
+If `anas` is not recognized after a global installation:
+
+1. Verify that the installation completed.
+2. Check that npm's global executable directory is included in your system PATH.
+3. Restart your terminal.
+4. Confirm the executable name exposed by the installed package.
+
+### API key not detected
+
+Verify that the correct environment variable is configured for your selected provider.
+
+### Cloud login fails
+
+Check your network connection and ANAS Cloud availability.
+
+### Provider request fails
+
+Verify the API key, selected model, account credits, and provider availability.
+
+For additional help, see [Common Errors](/docs/troubleshooting/common-errors).
 
 ## What's next?
 
-* [Quickstart](/docs/getting-started/quickstart) — launch your first session.
-* [AI Providers](/docs/guides/ai-providers) — configure your provider.
-* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-* [CLI Commands](/docs/reference/commands) — explore available commands.
-* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot setup issues.
+- [Quickstart](/docs/getting-started/quickstart) — launch your first session.
+- [AI Providers](/docs/configuration/providers) — configure your provider.
+- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+- [Tools & Permissions](/docs/reference/tools) — understand tool access.
+- [ANAS Cloud](/docs/guides/anas-cloud) — explore cloud features.
+- [Sessions](/docs/guides/sessions) — manage conversation history.
+- [Memory](/docs/guides/memory) — understand agent memory.
+- [CLI Commands](/docs/reference/commands) — explore commands.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot setup issues.

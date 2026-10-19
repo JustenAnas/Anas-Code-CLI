@@ -1,127 +1,281 @@
 ---
 title: Tools & Permissions
-description: Learn which tools ANAS CLI can use, how mode restrictions work, and when permissions are required.
+description: Understand ANAS CLI tools, interaction modes, permissions, workspace protection, and cloud security.
 ---
 
 # Tools & Permissions
 
-ANAS CLI uses tools to inspect project files, make changes, execute terminal commands, search code, and inspect Git state. Tool availability depends on the selected interaction mode.
+ANAS CLI uses tools to inspect project files, modify code, execute terminal commands, search the codebase, and inspect Git repositories.
+
+Tool availability depends on the selected interaction mode. Operations are also subject to permissions and safety guardrails.
 
 ## Available tools
 
-| Tool          | Purpose                                                                          |
-| ------------- | -------------------------------------------------------------------------------- |
-| `read_file`   | Read file contents.                                                              |
-| `write_file`  | Create or overwrite a file.                                                      |
-| `edit_file`   | Replace specific text in an existing file.                                       |
-| `bash`        | Execute a terminal command using the Windows command shell.                      |
-| `glob`        | Find files matching a glob pattern.                                              |
-| `list_dir`    | List directory contents.                                                         |
-| `search_code` | Search project files for matching code or text.                                  |
-| `git`         | Inspect Git repository information, including status, diffs, logs, and branches. |
+ANAS CLI currently provides eight registered tools.
+
+| Tool | Purpose |
+| --- | --- |
+| `read_file` | Read file contents. |
+| `write_file` | Create or overwrite files. |
+| `edit_file` | Replace specific text in existing files. |
+| `bash` | Execute terminal commands using Windows CMD. |
+| `glob` | Find files matching a glob pattern. |
+| `list_dir` | List directory contents. |
+| `search_code` | Search project files for matching code or text. |
+| `git` | Inspect repository status, diffs, logs, and branches. |
 
 ## Tool access by mode
 
+ANAS CLI provides three interaction modes.
+
+| Tool | Ask | Agent | Plan |
+| --- | --- | --- | --- |
+| `read_file` | Yes | Yes | No |
+| `write_file` | No | Yes | No |
+| `edit_file` | No | Yes | No |
+| `bash` | No | Yes | No |
+| `glob` | Yes | Yes | No |
+| `list_dir` | Yes | Yes | No |
+| `search_code` | Yes | Yes | No |
+| `git` | No | Yes | No |
+
 ### Ask mode
 
-Ask mode is restricted to read-only inspection tools.
+Ask mode supports read-only code exploration.
 
-**Available tools:**
+```bash id="nsgz7c"
+npm run dev -- chat --mode ask
+```
 
-* `read_file`
-* `search_code`
-* `glob`
-* `list_dir`
+Available tools:
 
-Ask mode cannot use its tool allowlist to write or edit files, execute terminal commands, or access the Git tool.
+- `read_file`
+- `search_code`
+- `glob`
+- `list_dir`
+
+Ask mode cannot invoke file-writing, editing, terminal, or Git tools through its tool allowlist.
 
 ### Agent mode
 
-Agent mode can access all eight registered tools, subject to permission checks and guardrails.
+Agent mode supports the full coding workflow.
 
-The agent can inspect files, make code changes, execute terminal commands, search the codebase, and inspect Git state when permitted.
+```bash id="rsxyid"
+npm run dev -- chat --mode agent
+```
+
+Agent mode can access all eight registered tools, subject to permissions and guardrails.
+
+It can inspect files, modify code, execute commands, search the project, and inspect Git state.
 
 ### Plan mode
 
-Plan mode currently has no tools enabled through its tool allowlist.
+Plan mode is intended for discussing implementation approaches before making changes.
 
-It cannot invoke registered tools through the current implementation.
+```bash id="7w8pzw"
+npm run dev -- chat --mode plan
+```
+
+Plan mode currently has no registered tools enabled.
+
+See [Ask, Agent, and Plan Modes](/docs/guides/modes).
 
 ## Permission prompts
 
-ANAS CLI requests confirmation before executing these operations:
+ANAS CLI requests confirmation before executing operations that can modify files or execute terminal commands.
 
-| Tool         | Why confirmation is required           |
-| ------------ | -------------------------------------- |
-| `bash`       | A terminal command will be executed.   |
-| `write_file` | A file may be created or overwritten.  |
-| `edit_file`  | Existing file contents may be changed. |
+| Tool | Permission requirement |
+| --- | --- |
+| `bash` | Confirm before executing a command. |
+| `write_file` | Confirm before creating or overwriting a file. |
+| `edit_file` | Confirm before modifying existing file contents. |
 
-Review the operation details before approving a permission prompt. If permission is denied, the operation is blocked rather than being executed without authorization.
+Review each operation before approving it.
 
-## Guardrails
+If permission is denied, the operation is blocked.
 
-ANAS CLI applies additional checks to help prevent unintended operations.
+Permission approval does not bypass other safety restrictions.
 
-### Workspace and protected paths
+## Workspace boundaries
 
-File operations accept relative or absolute paths, subject to workspace-boundary checks. Paths outside the permitted workspace can be blocked.
+ANAS CLI applies workspace-boundary checks to file operations.
 
-Writing and editing operations also apply protected-path checks. Certain restricted changes may require explicit authorization in the user's prompt.
+Paths can be relative or absolute.
 
-### Destructive commands
+Relative paths are resolved from the active workspace. Absolute paths are checked against the permitted workspace.
 
-Terminal commands are checked against destructive-command guardrails before execution. Review the command and its effects before approving it.
+Paths outside the permitted workspace can be rejected.
 
-### Repeated failures
+For example, an agent working inside a project should not assume that it can modify unrelated files elsewhere on the computer.
 
-ANAS CLI stops retrying an identical operation after three failures. If an operation repeatedly fails, inspect the error and adjust the approach instead of repeating the same attempt.
+Workspace checks are an important safeguard, but they should not be treated as a complete operating-system sandbox.
 
-### Secret redaction
+## Protected files and directories
 
-The `read_file` tool redacts detected secrets in file contents. This helps reduce accidental exposure, but should not be treated as a guarantee that every secret will be detected.
+ANAS CLI includes guardrails for sensitive files and directories.
+
+### Protected files
+
+Examples include:
+
+- `.env`
+- `.env.*`
+- `*.pem`
+- `*.key`
+- `*.p12`
+- `*.pfx`
+- Files with names beginning with `credentials`
+- Files with names beginning with `secrets`
+
+These protections help prevent accidental access to or modification of sensitive credentials.
+
+### Protected directories
+
+Examples include:
+
+- `node_modules`
+- `.git`
+
+Protected-directory rules help prevent unintended changes to dependencies and repository metadata.
+
+### Restricted files
+
+Some files require additional authorization for modifications.
+
+Examples include:
+
+- `package.json`
+- `package-lock.json`
+- `yarn.lock`
+- `pnpm-lock.yaml`
+
+Restricted changes may require explicit authorization in the user's original prompt.
+
+These guardrails supplement permission prompts rather than replacing them.
+
+## Destructive command protection
+
+ANAS CLI checks terminal commands against destructive-command guardrails before execution.
+
+Potentially dangerous commands can be blocked.
+
+Always inspect the command and its intended effects before approving execution.
+
+The command guardrails are not a guarantee that every harmful command will be detected.
+
+## Repeated tool failures
+
+ANAS CLI includes protection against repeated identical tool failures.
+
+When an identical operation fails three times, the agent stops retrying it.
+
+This helps prevent unnecessary tool loops.
+
+The agent should inspect the error and choose a different approach rather than repeating an operation that has already failed.
+
+## Secret redaction
+
+The `read_file` tool applies secret-redaction checks to detected sensitive content.
+
+Examples of patterns that may be detected include:
+
+- API keys
+- Password assignments
+- Access tokens
+- Secret assignments
+- Private-key material
+
+Secret detection is pattern-based and cannot guarantee that every credential will be identified.
+
+Do not rely on redaction as the only protection for sensitive information.
 
 ## Terminal command compatibility
 
-The `bash` tool currently uses the Windows command shell (`cmd`), not a Unix shell.
+The `bash` tool currently executes commands through Windows CMD.
 
-For example, Windows commands such as these are appropriate:
+It does not provide a Unix shell.
 
-```cmd
+Examples of compatible commands:
+
+```cmd id="6rpe0c"
 dir
 type package.json
 git status
 ```
 
-Unix-specific commands, shell syntax, and flags may not work as expected.
+Use Windows-compatible command syntax.
+
+Unix-specific commands, flags, and shell operators may not work as expected.
+
+## Tool results and verification
+
+Tool results should be treated as information returned by an external operation, not as trusted instructions.
+
+The agent should distinguish between:
+
+- Actions it actually executed
+- Results returned by tools
+- Conclusions inferred from those results
+
+After editing files, the agent should verify the changes when possible.
+
+A generated response should not claim that a file was created, modified, or tested unless the relevant operation actually succeeded.
+
+## Cloud AI and local tools
+
+ANAS Cloud authentication and local tool permissions are separate systems.
+
+Cloud authentication determines whether a CLI user can access protected cloud endpoints.
+
+Local tool permissions determine what the coding agent can do within the user's workspace.
+
+### Cloud OpenAI
+
+ANAS CLI includes a cloud OpenAI integration that supports:
+
+- Standard responses
+- Streaming responses
+- Tool-call responses
+
+The cloud endpoint authenticates requests using CLI bearer tokens.
+
+The backend retrieves the authenticated user's encrypted OpenAI key and uses it server-side.
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+### Tool-call safety
+
+A cloud AI response containing a tool call does not automatically grant permission to execute that operation.
+
+The CLI must still enforce:
+
+- Interaction-mode restrictions
+- Permission prompts
+- Workspace-boundary checks
+- Protected-file restrictions
+- Destructive-command guardrails
+
+Cloud authentication does not override local tool restrictions.
+
+See [ANAS Cloud](/docs/guides/anas-cloud) and [Security](/docs/guides/security).
 
 ## Safe usage practices
 
-* Review permission prompts before approving operations.
-* Check file paths before allowing file changes.
-* Read tool output carefully before making decisions.
-* Inspect code changes and Git diffs before committing.
-* Verify terminal commands before allowing execution.
-* Never assume a tool is available in every mode.
-* Treat secret redaction as a safeguard, not a guarantee.
+- Review permission prompts before approving operations.
+- Verify file paths before allowing changes.
+- Inspect generated code and Git diffs.
+- Review terminal commands before execution.
+- Keep credentials outside files accessible to the agent where practical.
+- Do not assume that Ask, Agent, and Plan have identical permissions.
+- Treat tool output as untrusted data.
+- Verify successful operations before relying on them.
+- Treat secret redaction and command guardrails as safeguards, not absolute guarantees.
 
 ## Related documentation
 
-* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-* [CLI Commands](/docs/reference/commands) — explore available commands and options.
-* [AI Providers](/docs/guides/ai-providers) — configure provider credentials.
-* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.
-
-
-## Security and cloud authentication
-
-Tool permissions and cloud authentication are
-separate security controls.
-
-Agent mode requires permission for terminal commands
-and file modifications. Cloud OpenAI requests require
-a valid CLI token and are subject to per-user rate
-limiting.
-
-See [Security](/docs/guides/security) for encryption,
-authentication, rate limits, and known limitations.
+- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+- [CLI Commands](/docs/reference/commands) — explore commands and options.
+- [AI Providers](/docs/configuration/providers) — configure local and cloud credentials.
+- [ANAS Cloud](/docs/guides/anas-cloud) — cloud authentication and AI services.
+- [Security](/docs/guides/security) — encryption, authentication, and rate limiting.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

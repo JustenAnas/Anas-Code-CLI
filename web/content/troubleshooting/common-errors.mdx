@@ -1,11 +1,11 @@
 ---
 title: Common Errors
-description: Troubleshoot common ANAS CLI setup, provider, tool, and session issues.
+description: Troubleshoot ANAS CLI installation, AI providers, tools, cloud authentication, sessions, and memory.
 ---
 
 # Common Errors
 
-This guide covers common problems you may encounter while installing, configuring, and using ANAS CLI.
+This guide covers common problems when installing, configuring, and using ANAS CLI and ANAS Cloud.
 
 ## Node.js version error
 
@@ -13,14 +13,19 @@ This guide covers common problems you may encounter while installing, configurin
 
 **Solution:**
 
-1. Check your installed version:
+Check your installed version:
 
-   ```bash
-   node -v
-   ```
+```bash
+node -v
+```
 
-2. Install a supported Node.js version if necessary.
-3. Restart your terminal and try again.
+Install a supported Node.js version if necessary, restart your terminal, and try again.
+
+Run the environment check:
+
+```bash
+npm run dev -- doctor
+```
 
 ## API key is missing
 
@@ -28,103 +33,339 @@ This guide covers common problems you may encounter while installing, configurin
 
 **Solution:**
 
-1. Create or check your `.env` file in the project root.
-2. Confirm that the environment variable matches your selected provider.
+Check your `.env` file in the project root.
 
-   | Provider   | Environment variable |
-   | ---------- | -------------------- |
-   | Claude     | `ANTHROPIC_API_KEY`  |
-   | OpenAI     | `OPENAI_API_KEY`     |
-   | OpenRouter | `OPENROUTER_API_KEY` |
-   | Gemini     | `GEMINI_API_KEY`     |
-   | Groq       | `GROQ_API_KEY`       |
+| Provider | Environment variable |
+| --- | --- |
+| OpenAI | `OPENAI_API_KEY` |
+| Claude | `ANTHROPIC_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Gemini | `GEMINI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
 
-3. Restart the CLI after changing environment configuration.
+For example:
 
-Keep your API keys private and never commit them to version control.
+```env
+OPENAI_API_KEY=your_openai_api_key
+```
 
-## Invalid API key or authentication error
+Restart the CLI after changing environment variables.
 
-**Problem:** The provider rejects your API key.
+Never commit your `.env` file or API keys to version control.
+
+**Note:** Local environment variables and ANAS Cloud provider-key storage are separate configuration methods.
+
+See [AI Providers](/docs/configuration/providers).
+
+## Invalid API key or provider authentication error
+
+**Problem:** An AI provider rejects your API key.
 
 **Solution:**
 
-* Check that the key is copied correctly.
-* Confirm that the key belongs to the selected provider.
-* Verify that the key is active and has the necessary permissions.
-* Check the provider's account or billing dashboard if access or credits are required.
+- Check that the key was copied correctly.
+- Confirm that it belongs to the selected provider.
+- Verify that the key is active and has the required permissions.
+- Check your provider account for billing or access restrictions.
+- Confirm that the selected model is available to your account.
 
-The `doctor` command reports whether API keys are configured, but a configured key is not necessarily valid.
+The `doctor` command checks whether credentials are configured. It does not guarantee that they are valid.
+
+## Insufficient credits or quota exceeded
+
+**Problem:** The provider rejects requests because of insufficient credits, quota, or account limits.
+
+**Solution:**
+
+1. Check your provider's billing dashboard.
+2. Verify your available credits or spending limits.
+3. Confirm that your account can access the selected model.
+4. Retry only after resolving the provider-side restriction.
+
+ANAS CLI cannot override provider billing restrictions.
 
 ## OpenRouter model selection fails
 
-**Problem:** ANAS CLI cannot load the OpenRouter model list or finds no eligible models.
+**Problem:** ANAS CLI cannot retrieve OpenRouter models or finds no eligible models.
 
 **Solution:**
 
-1. Confirm that `OPENROUTER_API_KEY` is configured correctly.
-2. Check your internet connection and OpenRouter service status.
-3. Verify that your account and key can access the API.
-4. Try again later if the model list cannot be retrieved.
+1. Verify that `OPENROUTER_API_KEY` is configured.
+2. Check your internet connection.
+3. Check OpenRouter's service status.
+4. Confirm that your key has API access.
+5. Retry the guided setup.
 
-The guided setup filters for text-only models that support tool calling.
+```bash
+npm run dev -- wakeup
+```
+
+The model picker filters for eligible text models that support tool calling.
+
+Free-model availability and pricing can change.
 
 ## Provider request fails
 
-**Problem:** A request fails while generating a response.
+**Problem:** A request fails while generating an AI response.
 
 **Solution:**
 
-* Check your internet connection.
-* Verify your API key and account status.
-* Confirm that the selected model is available.
-* Check provider rate limits and usage limits.
-* Review the error message for provider-specific details.
+- Check your network connection.
+- Verify your API key.
+- Confirm that the selected model is available.
+- Review provider rate limits and account usage.
+- Inspect the returned error message.
+
+If the problem is provider-specific, try another configured provider to help isolate the cause.
+
+## Cloud login fails
+
+**Problem:** ANAS CLI cannot authenticate with ANAS Cloud.
+
+**Solution:**
+
+Run:
+
+```bash
+npm run dev -- login
+```
+
+Check that:
+
+- Your internet connection is working.
+- The ANAS Cloud backend is reachable.
+- Your account credentials are correct.
+- The configured cloud service URL is correct.
+
+Read the authentication error returned by the CLI.
+
+Cloud login is separate from configuring a local provider API key.
+
+## HTTP 401 — Unauthorized
+
+**Problem:** A protected ANAS Cloud endpoint returns HTTP `401`.
+
+**Possible causes:**
+
+- No CLI access token was supplied.
+- The token is invalid.
+- The token has expired.
+- The token has been revoked.
+- The token does not match an active authenticated session.
+
+**Solution:**
+
+Sign in again:
+
+```bash
+npm run dev -- login
+```
+
+ANAS CLI access tokens have a 30-day expiration period.
+
+Do not share your access token or include it in bug reports.
+
+## Cloud logout issues
+
+**Problem:** Logging out does not behave as expected.
+
+**Solution:**
+
+Run:
+
+```bash
+npm run dev -- logout
+```
+
+Review the CLI output for errors.
+
+Logging out of ANAS Cloud does not delete local project files or conversation data.
+
+## Cloud provider key is missing
+
+**Problem:** A cloud AI request cannot find the required provider key.
+
+**Solution:**
+
+1. Confirm that you are authenticated with ANAS Cloud.
+2. Verify that the required provider key was saved through the authenticated cloud provider-key endpoint.
+3. Confirm that you are using the same account that owns the saved key.
+4. Check whether the key was deleted or replaced.
+
+A key configured in your local `.env` file is not automatically the same as a key stored in ANAS Cloud.
+
+Cloud provider-key management supports checking, saving or replacing, and deleting saved credentials.
+
+See [AI Providers](/docs/configuration/providers).
+
+## Cloud OpenAI request fails
+
+**Problem:** An authenticated cloud OpenAI request returns an error.
+
+**Solution:**
+
+Check that:
+
+- Your CLI authentication token is valid.
+- Your OpenAI key is saved in ANAS Cloud.
+- The OpenAI key has access to the requested model.
+- Your OpenAI account has available credits or quota.
+- The ANAS Cloud backend is reachable.
+
+The current cloud OpenAI integration uses `gpt-4o`.
+
+Cloud OpenAI supports standard responses, streaming, and tool-call responses.
+
+Do not assume that cloud execution is available for every locally supported provider.
+
+## HTTP 429 — Rate limit exceeded
+
+**Problem:** ANAS Cloud returns HTTP `429`.
+
+**Cause:**
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+**Solution:**
+
+1. Stop sending additional requests temporarily.
+2. Check the `Retry-After` response header.
+3. Wait for the indicated interval.
+4. Retry the request.
+
+Avoid immediately repeating failed requests in a loop.
+
+**Important:** This rate limit controls request frequency. It does not guarantee a maximum API bill.
+
+## Cloud streaming is interrupted
+
+**Problem:** A streaming AI response stops unexpectedly.
+
+**Possible causes:**
+
+- Network interruption
+- Backend connection failure
+- Provider-side error
+- Request timeout
+- Client disconnection
+
+**Solution:**
+
+Check your connection and retry when appropriate.
+
+Do not assume that an interrupted stream completed successfully.
+
+Final token-usage information may be unavailable if the stream ends prematurely.
 
 ## A tool cannot access a file
 
-**Problem:** A file-reading or file-editing operation fails.
+**Problem:** A file-reading or editing operation fails.
 
 **Solution:**
 
-* Check that the path exists.
-* Verify the spelling and file extension.
-* Use a path relative to your project when practical.
-* Confirm that the file is inside the permitted workspace.
-* Check whether the operation was blocked by a safety rule.
+- Confirm that the file exists.
+- Check its spelling and extension.
+- Verify that the path is inside the permitted workspace.
+- Check whether the file or directory is protected.
+- Review the exact tool error.
 
-File operations can be restricted when a path is outside the permitted workspace.
+ANAS CLI accepts relative and absolute paths, subject to workspace-boundary checks.
+
+Paths outside the permitted workspace can be blocked.
+
+## Protected or restricted file error
+
+**Problem:** ANAS CLI blocks access to or modification of a sensitive file.
+
+**Explanation:**
+
+ANAS CLI includes guardrails for sensitive paths.
+
+Examples of protected files include:
+
+- `.env`
+- `.env.*`
+- `*.pem`
+- `*.key`
+- `*.p12`
+- `*.pfx`
+- Files beginning with `credentials`
+- Files beginning with `secrets`
+
+Protected directories include:
+
+- `node_modules`
+- `.git`
+
+Restricted files include:
+
+- `package.json`
+- `package-lock.json`
+- `yarn.lock`
+- `pnpm-lock.yaml`
+
+Some restricted changes require explicit authorization in the user's prompt.
+
+Do not attempt to bypass workspace or credential protections.
+
+See [Tools & Permissions](/docs/reference/tools).
 
 ## A tool operation is denied
 
-**Problem:** ANAS CLI does not execute a command or modify a file.
+**Problem:** ANAS CLI refuses to execute a command or modify a file.
 
 **Solution:**
 
-* Review the permission prompt and confirm whether the operation was approved.
-* Check whether the selected mode allows the tool.
-* Inspect the operation details and any guardrail message.
-* If the operation is destructive or affects protected paths, review the restrictions before trying again.
+Check:
 
-Ask mode is limited to read-only tools. Agent mode provides broader tool access, subject to permission checks and guardrails. Plan mode currently has no tools enabled.
+1. Whether the selected mode allows the requested tool.
+2. Whether the permission prompt was approved.
+3. Whether the operation violates a guardrail.
+4. Whether the path is within the permitted workspace.
+
+### Mode restrictions
+
+| Mode | Tool access |
+| --- | --- |
+| Ask | Read-only inspection tools |
+| Agent | All eight registered tools, subject to permissions |
+| Plan | No registered tools |
+
+Agent mode requires confirmation for terminal commands and file-writing or editing operations.
 
 ## Repeated tool failures
 
 **Problem:** ANAS CLI stops retrying an operation.
 
+**Explanation:**
+
+ANAS CLI stops retrying an identical operation after three failures.
+
 **Solution:**
 
-Inspect the error output, check the path or command, and change the operation before trying again. ANAS CLI stops retrying an identical operation after three failures.
+Inspect the error and change the approach.
+
+For example:
+
+- Correct an invalid path.
+- Use a supported command.
+- Check whether a required file exists.
+- Verify permissions.
+- Choose a different operation when appropriate.
+
+Do not repeatedly submit an unchanged failing operation.
 
 ## Terminal command does not work
 
-**Problem:** A terminal command fails when executed through the `bash` tool.
+**Problem:** A command fails through the `bash` tool.
+
+**Explanation:**
+
+The current implementation uses Windows CMD rather than a Unix shell.
 
 **Solution:**
 
-The current implementation executes commands through the Windows command shell. Use Windows-compatible syntax and check whether the command depends on Unix-specific utilities or flags.
-
-For example:
+Use Windows-compatible commands.
 
 ```cmd
 dir
@@ -132,24 +373,126 @@ type package.json
 git status
 ```
 
-## Cloud login issues
+Unix-specific commands and flags may not work.
 
-**Problem:** Logging in to ANAS Cloud or logging out does not work as expected.
+For example, do not assume that commands such as `ls -la` or Unix shell operators are supported.
+
+## Local session history disappeared
+
+**Problem:** Previous local conversations are missing after restarting ANAS CLI.
+
+**Explanation:**
+
+Local sessions are stored in the current CLI process.
+
+They are not automatically persisted to a local session database.
 
 **Solution:**
 
-* Check your internet connection.
-* Retry the relevant command:
+If the conversation was successfully synchronized to ANAS Cloud, sign in and use:
 
-  ```bash
-  npm run dev -- login
-  ```
+```text
+/resume
+```
 
-  ```bash
-  npm run dev -- logout
-  ```
+Select an available cloud session.
 
-* Read any authentication error returned by the CLI.
+If the conversation was never saved to the cloud, it may not be recoverable after the original process exits.
+
+See [Sessions](/docs/guides/sessions).
+
+## Cloud session does not appear
+
+**Problem:** A previous conversation is missing from the cloud resume menu.
+
+**Solution:**
+
+Check that:
+
+- You are logged in to the correct ANAS Cloud account.
+- The original session synchronized successfully.
+- The backend is reachable.
+- The network connection is working.
+
+Use:
+
+```text
+/resume
+```
+
+Cloud synchronization is attempted after chat processing, but successful storage is not guaranteed.
+
+The `/history` command lists local sessions in the current process. It does not directly list every cloud session.
+
+## Cloud synchronization fails
+
+**Problem:** ANAS CLI reports a cloud synchronization error.
+
+**Solution:**
+
+1. Check your cloud authentication.
+2. Verify network connectivity.
+3. Check backend availability.
+4. Review the returned error.
+
+The current local conversation remains in memory while the CLI process is running.
+
+A failed synchronization should not be treated as a successfully saved cloud session.
+
+## Memory does not update
+
+**Problem:** ANAS CLI does not appear to remember a new preference or project decision.
+
+**Explanation:**
+
+Memory updates run asynchronously after normal Ask or Agent responses.
+
+A memory update may fail because of:
+
+- Provider request failure
+- Invalid returned JSON
+- Cloud synchronization failure
+- Process termination before completion
+
+**Solution:**
+
+Allow the memory update to complete and check for relevant errors.
+
+Plan mode does not follow the same normal memory-update path.
+
+See [Memory](/docs/guides/memory).
+
+## Memory is missing after restarting
+
+**Problem:** Previously available memory is no longer present.
+
+**Explanation:**
+
+Local memory is held in the CLI process rather than automatically written to a persistent local file.
+
+Cloud memory can provide persistence when saving and retrieval succeed.
+
+**Solution:**
+
+Check your ANAS Cloud authentication and whether memory was successfully saved and retrieved.
+
+Do not assume that cloud memory automatically synchronizes across every provider and model.
+
+## Memory differs after switching providers
+
+**Problem:** A different provider does not appear to remember previously stored information.
+
+**Explanation:**
+
+ANAS CLI is designed to support provider-independent memory.
+
+However, shared cloud storage does not by itself guarantee that every provider's agent loop automatically loads and uses the same memory.
+
+**Solution:**
+
+Verify that memory was loaded into the current agent context and that the selected provider received it.
+
+See [Memory](/docs/guides/memory) and [AI Providers](/docs/configuration/providers).
 
 ## Verbose usage information is missing
 
@@ -157,7 +500,7 @@ git status
 
 **Solution:**
 
-Use the `--verbose` option with a supported command:
+Use `--verbose` with a supported command:
 
 ```bash
 npm run dev -- wakeup --verbose
@@ -165,21 +508,36 @@ npm run dev -- chat --verbose
 npm run dev -- talk "Explain this project" --verbose
 ```
 
-Usage information depends on what the selected provider returns. Displayed costs should be treated as estimates.
+Usage information depends on what the selected provider returns.
+
+Displayed costs are estimates and may not match final provider billing.
 
 ## Still having trouble?
 
-If the problem persists:
+Start with the environment check:
 
-1. Run `npm run dev -- doctor`.
-2. Check the provider configuration.
-3. Read the complete error message.
-4. Identify the command, provider, and operation that failed before investigating further.
+```bash
+npm run dev -- doctor
+```
+
+Then identify:
+
+1. The command that failed.
+2. The selected provider and model, if applicable.
+3. Whether the operation was local or cloud-based.
+4. The exact error message.
+5. Whether authentication, permissions, or network connectivity were involved.
+
+When reporting a problem, remove API keys, access tokens, passwords, and other credentials from logs or screenshots.
 
 ## Related documentation
 
-* [Installation](/docs/getting-started/installation) — install and configure ANAS CLI.
-* [Quickstart](/docs/getting-started/quickstart) — start your first session.
-* [AI Providers](/docs/guides/ai-providers) — configure supported providers.
-* [CLI Commands](/docs/reference/commands) — review command syntax.
-* [Tools & Permissions](/docs/guides/tools-and-permissions) — understand tool access and restrictions.
+- [Installation](/docs/getting-started/installation) — install ANAS CLI.
+- [Quickstart](/docs/getting-started/quickstart) — start your first session.
+- [AI Providers](/docs/configuration/providers) — configure provider credentials.
+- [ANAS Cloud](/docs/guides/anas-cloud) — understand cloud services.
+- [Sessions](/docs/guides/sessions) — manage conversation history.
+- [Memory](/docs/guides/memory) — understand memory behavior.
+- [CLI Commands](/docs/reference/commands) — review command syntax.
+- [Tools & Permissions](/docs/reference/tools) — understand tool restrictions.
+- [Security](/docs/guides/security) — review authentication, encryption, and rate limiting.

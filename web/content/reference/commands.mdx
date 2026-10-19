@@ -1,11 +1,11 @@
 ---
 title: CLI Commands
-description: Reference for ANAS CLI commands, options, and usage.
+description: Reference for ANAS CLI commands, options, cloud authentication, and interactive sessions.
 ---
 
 # CLI Commands
 
-ANAS CLI provides commands for interactive coding sessions, one-shot prompts, guided startup, and environment checks.
+ANAS CLI provides commands for interactive coding sessions, one-shot prompts, guided startup, cloud authentication, and environment checks.
 
 ## `wakeup`
 
@@ -21,11 +21,17 @@ Show token usage and estimated cost when supported:
 npm run dev -- wakeup --verbose
 ```
 
-The guided flow lets you select a provider and interaction mode. When OpenRouter is selected, ANAS CLI offers a model picker for supported text models with tool-calling capabilities.
+The guided flow lets you select a provider and interaction mode.
+
+When OpenRouter is selected, ANAS CLI offers a model picker for supported text models with tool-calling capabilities.
+
+Your provider and mode selections are saved in the CLI configuration.
 
 ## `chat`
 
-Start an interactive streaming chat session. The default mode is `agent`.
+Start an interactive streaming chat session.
+
+The default mode is `agent`.
 
 ```bash
 npm run dev -- chat
@@ -41,10 +47,26 @@ npm run dev -- chat --mode agent
 
 ### Options
 
-| Option              | Description                                         |
-| ------------------- | --------------------------------------------------- |
-| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`.                   |
-| `-v, --verbose`     | Show token usage and estimated cost when supported. |
+| Option | Description |
+| --- | --- |
+| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`. |
+| `-v, --verbose` | Show token usage and estimated cost when supported. |
+
+### Interaction modes
+
+**Ask mode**
+
+Read-only code exploration using `read_file`, `search_code`, `glob`, and `list_dir`.
+
+**Agent mode**
+
+Full coding-agent workflow with access to registered tools, subject to permissions and safety guardrails.
+
+**Plan mode**
+
+Discuss implementation approaches without invoking registered tools.
+
+See [Ask, Agent, and Plan Modes](/docs/guides/modes).
 
 ## `talk`
 
@@ -56,11 +78,13 @@ npm run dev -- talk "Explain this project's structure"
 
 ### Options
 
-| Option          | Description                                         |
-| --------------- | --------------------------------------------------- |
+| Option | Description |
+| --- | --- |
 | `-v, --verbose` | Show token usage and estimated cost when supported. |
 
 This command runs a one-shot query rather than starting an interactive chat session.
+
+Unlike `chat`, the `talk` command does not currently accept a `--mode` option.
 
 ## `doctor`
 
@@ -72,29 +96,95 @@ npm run dev -- doctor
 
 The command checks whether Node.js 18 or higher is installed and reports the configuration status of these providers:
 
-* Claude: `ANTHROPIC_API_KEY`
-* OpenAI: `OPENAI_API_KEY`
-* OpenRouter: `OPENROUTER_API_KEY`
-* Gemini: `GEMINI_API_KEY`
-* Groq: `GROQ_API_KEY`
+| Provider | Environment variable |
+| --- | --- |
+| Claude | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Gemini | `GEMINI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
 
-This checks whether keys are configured; it does not guarantee that a key is valid or that the account has available credits.
+The command checks whether keys are configured. It does not guarantee that a key is valid or that the provider account has available credits.
 
 ## `login`
 
-Start the ANAS CLI cloud login flow.
+Start the ANAS Cloud authentication flow.
 
 ```bash
 npm run dev -- login
 ```
 
+After successful authentication, ANAS CLI stores a cloud access token in its local configuration.
+
+The token is used to authenticate requests to protected ANAS Cloud endpoints.
+
+### Cloud authentication
+
+ANAS Cloud uses bearer tokens for CLI authentication.
+
+- CLI access tokens expire after 30 days.
+- The backend stores SHA-256 hashes of CLI tokens rather than plaintext tokens.
+- Browser sessions use a separate authentication mechanism.
+- Protected cloud endpoints identify the authenticated user from the supplied token.
+
+Cloud authentication enables access to supported account-based services, including provider-key management and cloud AI requests.
+
+See [ANAS Cloud](/docs/guides/anas-cloud).
+
 ## `logout`
 
-Log out of the ANAS CLI cloud session.
+Log out of the ANAS Cloud session.
 
 ```bash
 npm run dev -- logout
 ```
+
+This clears the locally stored cloud authentication state.
+
+A local logout should not be confused with guaranteed server-side token revocation unless that operation is performed by the implementation.
+
+To authenticate again, run `login`.
+
+## Cloud Provider Keys
+
+ANAS Cloud supports authenticated provider-key management.
+
+Available backend operations include:
+
+| Operation | Description |
+| --- | --- |
+| Check | Determine whether a provider key is saved. |
+| Save | Store or replace a provider key. |
+| Delete | Remove a saved provider key. |
+
+Saved provider keys are encrypted using AES-256-GCM before database storage.
+
+Provider-key records are scoped to the authenticated user.
+
+The cloud OpenAI endpoint retrieves the authenticated user's saved OpenAI key server-side. The key is not returned to the CLI as part of a cloud chat response.
+
+These operations are backend capabilities and should not be confused with separate CLI commands.
+
+See [AI Providers](/docs/configuration/providers).
+
+## Cloud AI Requests
+
+ANAS CLI includes a cloud OpenAI integration.
+
+The current cloud OpenAI endpoint uses `gpt-4o` and supports:
+
+- Standard AI responses
+- Streaming responses
+- Tool-call responses
+- Token usage information when available
+
+Cloud OpenAI requests are limited to **30 requests per minute per authenticated user**.
+
+If the limit is exceeded, the backend returns HTTP `429` with a `Retry-After` header.
+
+Rate limiting does not guarantee a maximum API bill.
+
+See [ANAS Cloud](/docs/guides/anas-cloud) and [Security](/docs/guides/security).
 
 ## `banner`
 
@@ -112,7 +202,7 @@ Print a greeting.
 npm run dev -- hello
 ```
 
-## Help and version
+## Help and Version
 
 Display available commands and options:
 
@@ -120,36 +210,38 @@ Display available commands and options:
 npm run dev -- --help
 ```
 
-Display the CLI version:
+Display the installed CLI version:
 
 ```bash
 npm run dev -- --version
 ```
 
-The current CLI version is `0.1.0`.
+The reported version depends on the installed ANAS CLI release.
 
-## Slash commands
+## Slash Commands
 
 These commands are available inside an interactive chat session:
 
-| Command       | Description                   |
-| ------------- | ----------------------------- |
-| `/help`       | Show available chat commands. |
-| `/exit`       | Exit the chat session.        |
-| `/new`        | Start a new conversation.     |
-| `/history`    | View conversation history.    |
-| `/resume`     | Resume a conversation.        |
-| `/mode ask`   | Switch to Ask mode.           |
-| `/mode agent` | Switch to Agent mode.         |
-| `/mode plan`  | Switch to Plan mode.          |
+| Command | Description |
+| --- | --- |
+| `/help` | Show available chat commands. |
+| `/exit` | Exit the chat session. |
+| `/new` | Start a new conversation. |
+| `/history` | View conversation history. |
+| `/resume` | Resume a conversation. |
+| `/mode ask` | Switch to Ask mode. |
+| `/mode agent` | Switch to Agent mode. |
+| `/mode plan` | Switch to Plan mode. |
 
 Unknown slash commands display the available command help.
 
-## Related documentation
+## Related Documentation
 
-* [Installation](/docs/getting-started/installation) — install and configure ANAS CLI.
-* [Quickstart](/docs/getting-started/quickstart) — start your first session.
-* [AI Providers](/docs/guides/ai-providers) — configure provider credentials.
-* [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
-* [Tools & Permissions](/docs/guides/tools-and-permissions) — explore available tools and permissions.
-* [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.
+- [Installation](/docs/getting-started/installation) — install and configure ANAS CLI.
+- [Quickstart](/docs/getting-started/quickstart) — start your first session.
+- [ANAS Cloud](/docs/guides/anas-cloud) — authentication, cloud AI, sessions, and memory.
+- [AI Providers](/docs/configuration/providers) — configure provider credentials.
+- [Modes](/docs/guides/modes) — understand Ask, Agent, and Plan modes.
+- [Tools & Permissions](/docs/reference/tools) — explore available tools and permissions.
+- [Security](/docs/guides/security) — understand cloud security protections.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshoot common issues.

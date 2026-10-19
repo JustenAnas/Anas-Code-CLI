@@ -1,83 +1,285 @@
 ---
 title: Memory
-description: Understand how ANAS CLI stores, updates, and syncs agent memory.
+description: Understand ANAS CLI's agent memory, provider-independent context, asynchronous updates, and ANAS Cloud synchronization.
 ---
 
 # Memory
 
-ANAS CLI has a memory system that helps the agent retain useful information across interactions, such as user preferences, project decisions, and constraints.
+ANAS CLI includes a memory system designed to retain useful information across interactions, including user preferences, project decisions, and development constraints.
 
-Memory is separate from conversation history. It stores concise text items rather than the complete conversation.
+Memory is separate from conversation history. Instead of storing every message, it maintains concise information that may be useful in future interactions.
+
+ANAS CLI also includes a cloud memory backend for storing account-associated memory.
 
 ## How memory works
 
-The memory system maintains a list of items associated with the agent's session store.
+The memory system maintains a collection of text items associated with the agent's session store.
 
-After a normal Agent or Ask response, ANAS CLI starts an asynchronous memory update. The configured provider reviews the conversation and existing memory to determine what should be retained, updated, or removed.
+After a normal Agent or Ask response, ANAS CLI starts an asynchronous memory update.
 
-Memory updates aim to preserve durable information rather than temporary questions or general advice.
+The configured AI provider reviews the conversation and existing memory to determine which information should be:
+
+- Retained
+- Updated
+- Added
+- Removed when outdated or incorrect
+
+The memory system is designed to prioritize durable information rather than temporary questions or general advice.
+
+Because updates are asynchronous, new memory may not be available immediately after a response.
 
 ## What memory can contain
 
 Memory may retain:
 
-* User preferences and working style
-* Important project decisions and constraints
-* Durable information useful for future interactions
-* Changes to previously stored preferences or decisions
+- User preferences and working style
+- Important project decisions
+- Development constraints
+- Long-term project requirements
+- Relevant technical preferences
+- Changes to previously stored information
 
-The memory manager is instructed to preserve existing items unless the conversation clearly indicates that they are outdated or incorrect.
+For example:
 
-## Memory in prompts
+```text id="et2rc5"
+The user prefers TypeScript for backend development.
 
-When memory contains items, ANAS CLI adds them to the agent's system prompt under the `Memory` section.
+The project uses Next.js and MongoDB.
 
-This gives the model relevant information while handling a request. Memory is included separately from the project structure and conversation history.
+The user wants minimal changes that preserve existing functionality.
 
-## Cloud memory
+The coding agent should verify file changes before reporting success.
+```
 
-When logged in, ANAS CLI can load and save memory through the cloud service.
+These are examples of possible memory items, not information automatically stored for every user.
 
-Cloud memory uses the key `agent-memory` and stores the items as JSON.
+The memory manager is instructed to preserve existing items unless the conversation indicates they are outdated or incorrect.
 
-* **Logged in:** The agent attempts to load shared cloud memory and save updates.
-* **Not logged in:** The agent continues using its in-memory data.
-* **Cloud unavailable:** Cloud memory operations are optional; failures are ignored so they do not prevent the agent from continuing.
+## Memory in agent prompts
 
-Cloud synchronization requires a working connection to the configured ANAS Cloud service.
+When memory contains items, ANAS CLI includes them in the agent's system prompt under a `Memory` section.
 
-## Important limitations
+This allows the selected model to consider relevant information while responding.
 
-* **Asynchronous updates:** Memory updates run in the background and are not awaited before the next prompt. A newly discussed preference may not be saved immediately.
-* **Plan mode:** Plan mode returns its plan before reaching the normal memory-update step.
-* **Provider dependency:** Updating memory requires a provider request. If parsing the returned JSON fails, the existing memory is retained.
-* **Process lifetime:** Local memory is held in memory rather than being written to a local persistent memory file. Do not assume it survives restarting the CLI.
-* **No guaranteed recall:** Memory helps provide context but does not guarantee that every past detail will be retained or recalled.
+Memory is provided separately from:
+
+- Conversation history
+- Project structure
+- Referenced files
+- Context compaction summaries
+
+Memory provides additional context but does not override tool permissions or security restrictions.
+
+## Provider-independent memory
+
+ANAS CLI is designed to support memory that is independent of the selected AI provider.
+
+The intended behavior is for memory to belong to the user or agent session store rather than to a particular model.
+
+For example, information retained while using OpenAI should remain useful after switching to Claude or OpenRouter.
+
+### Current implementation
+
+The local memory manager can include existing memory items in prompts sent to the currently selected provider.
+
+ANAS Cloud also provides a separate memory storage endpoint.
+
+However, complete automatic memory synchronization and retrieval across every provider and model should not be assumed without verifying the relevant integration.
+
+Provider-independent storage and provider-independent automatic recall are related but distinct capabilities.
+
+See [AI Providers](/docs/configuration/providers).
+
+## ANAS Cloud memory
+
+ANAS Cloud includes authenticated memory storage.
+
+The cloud memory integration uses the key:
+
+```text id="f42jxd"
+agent-memory
+```
+
+Memory items are represented as JSON data.
+
+### Cloud memory operations
+
+The cloud backend provides functionality for storing and retrieving account-associated memory.
+
+When the CLI's cloud memory integration is active:
+
+1. The CLI authenticates with ANAS Cloud.
+2. Existing cloud memory may be retrieved.
+3. Memory items are made available to the local memory manager.
+4. New or updated items may be synchronized to the cloud.
+
+Successful persistence depends on the cloud request completing successfully.
+
+### When logged in
+
+ANAS CLI can attempt cloud memory loading and saving through its authenticated backend.
+
+Cloud storage is intended to make memory available beyond the lifetime of one CLI process.
+
+### When not logged in
+
+The agent continues using its local in-memory memory store.
+
+Cloud memory operations are unavailable without authentication.
+
+### When the cloud is unavailable
+
+Cloud memory failures are non-blocking.
+
+The agent can continue operating with available local memory.
+
+A failed cloud operation does not mean that the memory was successfully saved remotely.
+
+## Local vs. cloud memory
+
+| Feature | Local memory | Cloud memory |
+| --- | --- | --- |
+| Stored in current CLI process | Yes | Loaded into the process when available |
+| Requires cloud authentication | No | Yes |
+| Requires internet access | No | Yes |
+| Persists after CLI restart | No | When successfully saved and retrieved |
+| Can provide context to the agent | Yes | Yes, after successful retrieval |
+| Automatically available across every provider | Depends on integration | Not guaranteed for every provider |
+
+## Memory update lifecycle
+
+A typical memory update follows this process:
+
+1. The agent receives a user message.
+2. Available memory is included in the agent's context.
+3. The selected provider generates a response.
+4. After a normal Ask or Agent response, the memory manager starts an asynchronous update.
+5. The provider reviews the conversation and existing memory.
+6. The returned memory data is parsed.
+7. Valid updates are applied to the local memory store.
+8. Cloud synchronization may be attempted when available.
+
+If the memory-update response cannot be parsed correctly, the existing memory is retained.
+
+The update process should not be confused with saving a complete conversation session.
 
 ## Memory and conversation history
 
-These features serve different purposes:
+| Feature | Purpose |
+| --- | --- |
+| Memory | Retains selected durable information |
+| Conversation history | Stores messages within a session |
+| Context compaction | Summarizes older messages when history grows |
+| Project context | Supplies a shallow view of workspace structure |
+| File references | Include contents of explicitly referenced files |
 
-| Feature              | Purpose                                                   |
-| -------------------- | --------------------------------------------------------- |
-| Memory               | Retains selected, durable information                     |
-| Conversation history | Stores messages within a session                          |
-| Context compaction   | Summarizes older messages when history grows              |
-| Project context      | Supplies a shallow view of the workspace's file structure |
-| File references      | Attach the contents of explicitly referenced files        |
+Memory does not replace conversation history.
 
-See [Sessions](/docs/guides/sessions) and [Context Management](/docs/guides/context-management) for related details.
+A session may contain many messages, while memory retains only selected information.
+
+See [Sessions](/docs/guides/sessions) and [Context Management](/docs/guides/context-management).
+
+## Important limitations
+
+### Asynchronous updates
+
+Memory updates run asynchronously.
+
+A new preference or decision may not be stored before the next prompt.
+
+### Plan mode
+
+Plan mode returns its plan before reaching the normal memory-update step.
+
+Do not assume Plan mode updates memory in the same way as Ask or Agent mode.
+
+### Provider dependency
+
+Memory updates require a provider request.
+
+If the request fails or returns invalid JSON, the existing memory is retained.
+
+### Local persistence
+
+Local memory is held in the CLI process rather than automatically written to a persistent local memory file.
+
+Do not assume local memory survives restarting the CLI.
+
+### Cloud synchronization
+
+Cloud memory persistence depends on successful authentication, network access, and backend operations.
+
+The existence of a cloud memory endpoint does not guarantee that every agent interaction automatically synchronizes memory.
+
+### Cross-provider recall
+
+Shared storage is intended to support provider-independent memory.
+
+Complete automatic recall across all providers and OpenRouter models requires successful integration with the agent's memory-loading and prompt-building flow.
+
+### No guaranteed recall
+
+Memory helps provide context but does not guarantee that every previous detail will be retained, retrieved, or used correctly.
+
+## Security and privacy
+
+Memory may contain project details or user preferences.
+
+Avoid intentionally storing:
+
+- Passwords
+- API keys
+- Authentication tokens
+- Private keys
+- Other sensitive credentials
+
+Cloud memory operations require authentication.
+
+Provider-key encryption and memory storage are separate features. Do not assume that memory values receive the same AES-256-GCM encryption as saved provider API keys.
+
+See [Security](/docs/guides/security) for authentication and encryption details.
 
 ## Troubleshooting
 
 ### Memory does not appear to update
 
-Memory updates happen asynchronously. Allow the provider request to finish before expecting a new item to be available.
+Memory updates are asynchronous.
 
-### Cloud memory is unavailable
-
-Check that you are logged in and that the configured ANAS Cloud service is reachable. Cloud failures are intentionally non-blocking.
+Allow the update process to complete and verify that the provider request succeeded.
 
 ### Memory is missing after restarting
 
-Local memory is not persisted to a local file. Cloud memory can provide persistence when cloud synchronization succeeds and the user is logged in.
+Local memory is not persisted to a local file.
+
+Cloud memory can provide persistence when saving and retrieval succeed.
+
+### Cloud memory is unavailable
+
+Check that:
+
+- You are logged in to ANAS Cloud.
+- Your CLI token is valid.
+- The cloud backend is reachable.
+- The relevant memory request completed successfully.
+
+### Memory differs between providers
+
+Verify that the selected provider receives the shared memory context.
+
+Switching providers does not by itself prove that cloud memory was loaded successfully.
+
+### Memory contains outdated information
+
+The memory manager is designed to update or remove outdated items when the conversation clearly establishes a change.
+
+However, automatic correction is not guaranteed.
+
+## Related documentation
+
+- [ANAS Cloud](/docs/guides/anas-cloud) — cloud authentication and backend services.
+- [Sessions](/docs/guides/sessions) — conversation history and cloud synchronization.
+- [Context Management](/docs/guides/context-management) — context handling and compaction.
+- [AI Providers](/docs/configuration/providers) — supported providers and credentials.
+- [Modes](/docs/guides/modes) — Ask, Agent, and Plan behavior.
+- [Security](/docs/guides/security) — authentication and data protection.
+- [Common Errors](/docs/troubleshooting/common-errors) — troubleshooting guidance.
