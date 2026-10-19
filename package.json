@@ -1,6 +1,6 @@
 {
   "name": "anas-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "license": "ISC",
   "author": "",
@@ -40,9 +40,9 @@
     "react": "^19.3.0"
   },
   "bin": {
-  "anas": "./dist/index.js",
-  "wakeup": "./dist/index.js"
-},
+    "anas": "./dist/index.js",
+    "wakeup": "./dist/index.js"
+  },
   "files": [
     "dist",
     "README.md",
