@@ -130,6 +130,26 @@ export class ClaudeProvider implements BaseProvider {
     this.model = model;
   }
 
+  
+async verifyApiKey(): Promise<void> {
+  try {
+    // A minimal request to verify that Claude accepts the API key.
+    await this.client.messages.create({
+      model: this.model,
+      max_tokens: 1,
+      messages: [
+        {
+          role: "user",
+          content: "Hi",
+        },
+      ],
+    });
+  } catch (error) {
+    this.handleError(error);
+  }
+}
+
+
   private buildMessages(
     messages: Message[],
     systemPrompt?: string,

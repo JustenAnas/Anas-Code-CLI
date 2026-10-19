@@ -454,9 +454,9 @@ ${plan.steps
           }`,
         ),
       );
-    } finally {
-      void syncConversation();
-    }
+    }  finally {
+  await syncConversation();
+}
   }
 
   console.log(fmt.dim("Session ended."));

@@ -40,8 +40,9 @@
     "react": "^19.3.0"
   },
   "bin": {
-    "anas": "dist/index.js"
-  },
+  "anas": "./dist/index.js",
+  "wakeup": "./dist/index.js"
+},
   "files": [
     "dist",
     "README.md",

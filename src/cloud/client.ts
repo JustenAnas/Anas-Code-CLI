@@ -1,7 +1,7 @@
-import { config } from "../config/user-config.js";
-import type { ToolCall } from "../providers/base.js";
 
-const DEFAULT_API_URL = "http://localhost:3000";
+import { config } from "../config/user-config.js";
+import { getCloudApiUrl } from "../commands/cloud-auth.js";
+import type { ToolCall } from "../providers/base.js";
 
 export type CloudSession = {
   id: string;
@@ -35,18 +35,23 @@ export class CloudClient {
   }
 
   private get apiUrl(): string {
-    return (process.env.ANAS_CLOUD_URL || DEFAULT_API_URL).replace(/\/+$/, "");
+    return getCloudApiUrl();
   }
 
   get isLoggedIn(): boolean {
     return Boolean(this.token);
   }
 
-  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async request<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     const token = this.token;
 
     if (!token) {
-      throw new Error("Not logged in to ANAS Cloud. Run: anas-cli login");
+      throw new Error(
+        "Not logged in to ANAS Cloud. Run: anas login",
+      );
     }
 
     let response: Response;
@@ -57,38 +62,51 @@ export class CloudClient {
         headers: {
           ...options.headers,
           Authorization: `Bearer ${token}`,
-          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(options.body
+            ? { "Content-Type": "application/json" }
+            : {}),
         },
       });
     } catch {
       throw new Error(
-        "Cannot connect to ANAS Cloud. Check the website server and network.",
+        `Cannot connect to ANAS Cloud at ${this.apiUrl}. ` +
+          "Check the website server and network.",
       );
     }
 
     if (response.status === 401) {
       config.delete("cloudToken");
       config.delete("cloudEmail");
-      throw new Error("Your ANAS Cloud login expired. Run: anas-cli login");
-    }
 
-    const result = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-
-    if (!response.ok) {
       throw new Error(
-        result?.error ?? `ANAS Cloud request failed (${response.status})`,
+        "Your ANAS Cloud login expired. Run: anas login",
       );
     }
 
-    return result as T;
+    const result = (await response
+      .json()
+      .catch(() => null)) as (T & { error?: string }) | null;
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error ??
+          `ANAS Cloud request failed (${response.status})`,
+      );
+    }
+
+    if (result === null) {
+      throw new Error(
+        "ANAS Cloud returned an invalid or empty JSON response.",
+      );
+    }
+
+    return result;
   }
 
   async listSessions(): Promise<CloudSession[]> {
-    const result = await this.request<{ sessions: CloudSession[] }>(
-      "/api/cloud/sessions",
-    );
+    const result = await this.request<{
+      sessions: CloudSession[];
+    }>("/api/cloud/sessions");
 
     return result.sessions;
   }
@@ -98,20 +116,25 @@ export class CloudClient {
     title?: string;
     workingDirectory?: string | null;
   }): Promise<CloudSession> {
-    const result = await this.request<{ session: CloudSession }>(
-      "/api/cloud/sessions",
-      {
-        method: "POST",
-        body: JSON.stringify(input),
-      },
-    );
+    const result = await this.request<{
+      session: CloudSession;
+    }>("/api/cloud/sessions", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
 
     return result.session;
   }
 
-  async listMessages(localSessionId: string): Promise<CloudMessage[]> {
-    const result = await this.request<{ messages: CloudMessage[] }>(
-      `/api/cloud/sessions/${encodeURIComponent(localSessionId)}/messages`,
+  async listMessages(
+    localSessionId: string,
+  ): Promise<CloudMessage[]> {
+    const result = await this.request<{
+      messages: CloudMessage[];
+    }>(
+      `/api/cloud/sessions/${encodeURIComponent(
+        localSessionId,
+      )}/messages`,
     );
 
     return result.messages;
@@ -128,8 +151,12 @@ export class CloudClient {
       toolCalls?: ToolCall[];
     },
   ): Promise<CloudMessage> {
-    const result = await this.request<{ message: CloudMessage }>(
-      `/api/cloud/sessions/${encodeURIComponent(localSessionId)}/messages`,
+    const result = await this.request<{
+      message: CloudMessage;
+    }>(
+      `/api/cloud/sessions/${encodeURIComponent(
+        localSessionId,
+      )}/messages`,
       {
         method: "POST",
         body: JSON.stringify(input),
@@ -140,21 +167,23 @@ export class CloudClient {
   }
 
   async listMemories(): Promise<CloudMemory[]> {
-    const result = await this.request<{ memories: CloudMemory[] }>(
-      "/api/cloud/memory",
-    );
+    const result = await this.request<{
+      memories: CloudMemory[];
+    }>("/api/cloud/memory");
 
     return result.memories;
   }
 
-  async saveMemory(key: string, content: string): Promise<CloudMemory> {
-    const result = await this.request<{ memory: CloudMemory }>(
-      "/api/cloud/memory",
-      {
-        method: "PUT",
-        body: JSON.stringify({ key, content }),
-      },
-    );
+  async saveMemory(
+    key: string,
+    content: string,
+  ): Promise<CloudMemory> {
+    const result = await this.request<{
+      memory: CloudMemory;
+    }>("/api/cloud/memory", {
+      method: "PUT",
+      body: JSON.stringify({ key, content }),
+    });
 
     return result.memory;
   }
@@ -162,7 +191,50 @@ export class CloudClient {
   async deleteMemory(key: string): Promise<void> {
     await this.request<{ success: boolean }>(
       `/api/cloud/memory?key=${encodeURIComponent(key)}`,
-      { method: "DELETE" },
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
+  // Check whether the logged-in user has a saved provider API key.
+  // The actual API key is never returned.
+  async hasProviderKey(provider: string): Promise<boolean> {
+    const result = await this.request<{
+      provider: string;
+      exists: boolean;
+    }>(
+      `/api/cli/provider-keys?provider=${encodeURIComponent(provider)}`,
+    );
+
+    return result.exists;
+  }
+
+  // Encrypt and save a provider API key through the ANAS backend.
+  // Encryption happens on the server, not inside the CLI.
+  async saveProviderKey(
+    provider: string,
+    apiKey: string,
+  ): Promise<void> {
+    await this.request<{ success: boolean }>(
+      "/api/cli/provider-keys",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          provider,
+          apiKey,
+        }),
+      },
+    );
+  }
+
+  // Delete a saved provider API key for the logged-in user.
+  async deleteProviderKey(provider: string): Promise<void> {
+    await this.request<{ success: boolean }>(
+      `/api/cli/provider-keys?provider=${encodeURIComponent(provider)}`,
+      {
+        method: "DELETE",
+      },
     );
   }
 }

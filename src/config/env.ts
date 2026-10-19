@@ -11,13 +11,29 @@ const PROVIDER_API_KEYS: Record<ProviderName, string> = {
   groq: "GROQ_API_KEY",
 };
 
-export function requireApiKey(provider: ProviderName): string {
+export function getApiKey(provider: ProviderName): string | undefined {
   const envName = PROVIDER_API_KEYS[provider];
-  const key = process.env[envName];
+  return process.env[envName]?.trim() || undefined;
+}
+
+export function setApiKey(provider: ProviderName, key: string): void {
+  const envName = PROVIDER_API_KEYS[provider];
+  const trimmed = key.trim();
+
+  if (!trimmed) {
+    throw new Error("API key cannot be empty.");
+  }
+
+  // Available to provider SDKs for the current CLI process.
+  process.env[envName] = trimmed;
+}
+
+export function requireApiKey(provider: ProviderName): string {
+  const key = getApiKey(provider);
 
   if (!key) {
     throw new Error(
-      `Missing ${envName}. Add your key to your .env file to use ${provider}.`,
+      `Missing ${PROVIDER_API_KEYS[provider]}. Run wakeup to configure ${provider}.`,
     );
   }
 

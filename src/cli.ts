@@ -110,9 +110,9 @@ export function createCli() {
       await cloudLogout();
     });
 
-  program.action(() => {
-    program.help();
-  });
+  program.action(async () => {
+  await wakeUp({ verbose: false });
+});
 
   return program;
 }

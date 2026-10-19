@@ -1,21 +1,50 @@
-import { createInterface } from "node:readline/promises";
-import { stdin, stdout } from "node:process";
+
+import { input, password } from "@inquirer/prompts";
 import { config } from "../config/user-config.js";
 
-const DEFAULT_API_URL = "http://localhost:3000";
+const DEFAULT_API_URL = "https://anas-cli.vercel.app";
 
-export async function cloudLogin() {
-  const terminal = createInterface({ input: stdin, output: stdout });
+export function getCloudApiUrl(): string {
+  return (
+    process.env.ANAS_CLOUD_API_URL?.trim() ||
+    DEFAULT_API_URL
+  ).replace(/\/+$/, "");
+}
 
+export function isCloudLoggedIn(): boolean {
+  return Boolean(config.get("cloudToken"));
+}
+
+export async function cloudLogin(): Promise<boolean> {
   try {
-    const email = (await terminal.question("Website email: ")).trim();
-    const password = await terminal.question("Website password: ");
+    const email = (
+      await input({
+        message: "ANAS account email:",
+        validate: (value) =>
+          value.trim().length > 0 || "Email is required.",
+      })
+    ).trim();
 
-    const response = await fetch(`${DEFAULT_API_URL}/api/cli/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+    const userPassword = await password({
+      message: "ANAS account password:",
+      mask: "*",
+      validate: (value) =>
+        value.length > 0 || "Password is required.",
     });
+
+    const response = await fetch(
+      `${getCloudApiUrl()}/api/cli/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password: userPassword,
+        }),
+      },
+    );
 
     const result = (await response.json()) as {
       token?: string;
@@ -24,25 +53,41 @@ export async function cloudLogin() {
     };
 
     if (!response.ok || !result.token) {
-      console.log(`Login failed: ${result.error ?? "Check your credentials."}`);
-      return;
+      console.error(
+        `Login failed: ${result.error ?? "Check your credentials."}`,
+      );
+      return false;
     }
 
     config.set("cloudToken", result.token);
     config.set("cloudEmail", result.user?.email ?? email);
 
-    console.log(`Logged in to ANAS Cloud as ${config.get("cloudEmail")}.`);
-  } catch {
     console.log(
-      "Couldn't connect to ANAS Cloud. Make sure the website server is running.",
+      `✓ Logged in to ANAS Cloud as ${config.get("cloudEmail")}.`,
     );
-  } finally {
-    terminal.close();
+
+    return true;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.name === "ExitPromptError"
+    ) {
+      throw error;
+    }
+
+    console.error(
+      `ANAS Cloud login failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+
+    return false;
   }
 }
 
-export async function cloudLogout() {
+export async function cloudLogout(): Promise<void> {
   config.delete("cloudToken");
   config.delete("cloudEmail");
+
   console.log("Logged out of ANAS Cloud.");
 }
