@@ -8,15 +8,10 @@ export const runtime = "nodejs";
 
 const MAX_BODY_BYTES = 1_000_000;
 
-type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
+type ToolDefinition = OpenAI.Chat.Completions.ChatCompletionTool;
+type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
-function respond(
-  body: Record<string, unknown>,
-  status = 200,
-) {
+function respond(body: Record<string, unknown>, status = 200) {
   return Response.json(body, {
     status,
     headers: {
@@ -24,6 +19,208 @@ function respond(
     },
   });
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isValidMessage(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.role !== "string") {
+    return false;
+  }
+
+  if (value.role === "system" || value.role === "user") {
+    return (
+      typeof value.content === "string" &&
+      value.content.length <= 50_000
+    );
+  }
+
+  if (value.role === "assistant") {
+    if (
+      value.content !== null &&
+      value.content !== undefined &&
+      (typeof value.content !== "string" ||
+        value.content.length > 50_000)
+    ) {
+      return false;
+    }
+
+    if (value.tool_calls === undefined) {
+      return typeof value.content === "string";
+    }
+
+    return (
+      Array.isArray(value.tool_calls) &&
+      value.tool_calls.length > 0 &&
+      value.tool_calls.length <= 20 &&
+      value.tool_calls.every(
+        (call: unknown) =>
+          isRecord(call) &&
+          typeof call.id === "string" &&
+          call.id.length > 0 &&
+          call.id.length <= 200 &&
+          call.type === "function" &&
+          isRecord(call.function) &&
+          typeof call.function.name === "string" &&
+          call.function.name.length > 0 &&
+          typeof call.function.arguments === "string" &&
+          call.function.arguments.length <= 50_000,
+      )
+    );
+  }
+
+  if (value.role === "tool") {
+    return (
+      typeof value.tool_call_id === "string" &&
+      value.tool_call_id.length > 0 &&
+      value.tool_call_id.length <= 200 &&
+      typeof value.content === "string" &&
+      value.content.length <= 50_000
+    );
+  }
+
+  return false;
+}
+
+function isValidTool(value: unknown): boolean {
+  if (!isRecord(value) || value.type !== "function") {
+    return false;
+  }
+
+  const fn = value.function;
+
+  return (
+    isRecord(fn) &&
+    typeof fn.name === "string" &&
+    /^[a-zA-Z0-9_-]{1,64}$/.test(fn.name) &&
+    typeof fn.description === "string" &&
+    fn.description.length <= 2_000 &&
+    isRecord(fn.parameters) &&
+    fn.parameters.type === "object"
+  );
+}
+
+
+async function streamOpenAIResponse(
+  client: OpenAI,
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
+): Promise<Response> {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: string, data: unknown) => {
+        controller.enqueue(
+          encoder.encode(
+            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+          ),
+        );
+      };
+
+      try {
+        const completion = await client.chat.completions.create({
+          model: "gpt-4o",
+          messages,
+          ...(tools?.length
+            ? { tools, tool_choice: "auto" as const }
+            : {}),
+          max_completion_tokens: 1024,
+          stream: true,
+          stream_options: { include_usage: true },
+        });
+
+        const toolCallsByIndex = new Map<
+          number,
+          { id: string; name: string; arguments: string }
+        >();
+
+        for await (const chunk of completion) {
+          const delta = chunk.choices[0]?.delta;
+
+          if (delta?.content) {
+            send("text", { content: delta.content });
+          }
+
+          for (const call of delta?.tool_calls ?? []) {
+            const existing = toolCallsByIndex.get(call.index) ?? {
+              id: "",
+              name: "",
+              arguments: "",
+            };
+
+            if (call.id) {
+              existing.id = call.id;
+            }
+
+            if (call.function?.name) {
+              existing.name += call.function.name;
+            }
+
+            if (call.function?.arguments) {
+              existing.arguments += call.function.arguments;
+            }
+
+            toolCallsByIndex.set(call.index, existing);
+          }
+
+          if (chunk.usage) {
+            send("usage", {
+              inputTokens: chunk.usage.prompt_tokens,
+              outputTokens: chunk.usage.completion_tokens,
+            });
+          }
+        }
+
+        if (toolCallsByIndex.size > 0) {
+          const toolCalls = [...toolCallsByIndex.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([, call]) => ({
+              id: call.id,
+              name: call.name,
+              input: JSON.parse(call.arguments || "{}"),
+            }));
+
+          send("tool_calls", { toolCalls });
+        }
+
+        send("done", {});
+      } catch (error) {
+        console.error(
+          "[Provider Stream]",
+          error instanceof Error ? error.message : error,
+        );
+
+        let message = "Cloud streaming failed";
+
+        if (error instanceof OpenAI.APIError) {
+          if (error.status === 401) {
+            message = "Invalid saved OpenAI API key";
+          } else if (error.status === 429) {
+            message = "OpenAI rate limit or quota exceeded";
+          } else {
+            message = "OpenAI provider request failed";
+          }
+        }
+
+        send("error", { error: message });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 
 export async function POST(request: Request) {
   try {
@@ -48,26 +245,37 @@ export async function POST(request: Request) {
       return respond({ error: "Request too large" }, 413);
     }
 
-    const body = await request.json().catch(() => null);
+    const rawBody = await request.text();
+
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_BODY_BYTES) {
+      return respond({ error: "Request too large" }, 413);
+    }
+
+    let body: unknown;
+
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return respond({ error: "Invalid JSON" }, 400);
+    }
+
+    if (!isRecord(body)) {
+      return respond({ error: "Invalid chat request" }, 400);
+    }
+
+    const messages = body.messages;
+    const tools = body.tools;
 
     if (
-      !body ||
       body.provider !== "openai" ||
-      !Array.isArray(body.messages) ||
-      body.messages.length === 0 ||
-      body.messages.length > 100 ||
-      !body.messages.every(
-        (message: unknown): message is ChatMessage =>
-          typeof message === "object" &&
-          message !== null &&
-          "role" in message &&
-          "content" in message &&
-          (message.role === "system" ||
-            message.role === "user" ||
-            message.role === "assistant") &&
-          typeof message.content === "string" &&
-          message.content.length <= 50_000,
-      )
+      !Array.isArray(messages) ||
+      messages.length === 0 ||
+      messages.length > 100 ||
+      !messages.every(isValidMessage) ||
+      (tools !== undefined &&
+        (!Array.isArray(tools) ||
+          tools.length > 20 ||
+          !tools.every(isValidTool)))
     ) {
       return respond({ error: "Invalid chat request" }, 400);
     }
@@ -92,17 +300,57 @@ export async function POST(request: Request) {
     }
 
     const apiKey = decryptProviderKey(saved.encryptedKey);
-
     const client = new OpenAI({ apiKey });
+
+    
+if (body.stream === true) {
+  return streamOpenAIResponse(
+    client,
+    messages as ChatMessage[],
+    Array.isArray(tools) && tools.length > 0
+      ? (tools as ToolDefinition[])
+      : undefined,
+  );
+}
+
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
-      messages: body.messages as ChatMessage[],
+      messages: messages as ChatMessage[],
+      ...(Array.isArray(tools) && tools.length > 0
+        ? {
+            tools: tools as ToolDefinition[],
+            tool_choice: "auto" as const,
+          }
+        : {}),
       max_completion_tokens: 1024,
     });
 
+    const message = completion.choices[0]?.message;
+
+    const toolCalls =
+      message?.tool_calls
+        ?.filter(
+          (call): call is Extract<
+            NonNullable<typeof message.tool_calls>[number],
+            { type: "function" }
+          > => call.type === "function",
+        )
+        .map((call) => ({
+          id: call.id,
+          name: call.function.name,
+          input: (() => {
+            try {
+              return JSON.parse(call.function.arguments);
+            } catch {
+              return {};
+            }
+          })(),
+        })) ?? [];
+
     return respond({
-      content: completion.choices[0]?.message?.content ?? "",
+      content: message?.content ?? "",
+      toolCalls,
       inputTokens: completion.usage?.prompt_tokens ?? 0,
       outputTokens: completion.usage?.completion_tokens ?? 0,
     });
