@@ -1,5 +1,4 @@
 
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { currentCliUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptProviderKey } from "@/lib/provider-key-crypto";
@@ -17,65 +16,10 @@ const PROVIDERS = [
 type Provider = (typeof PROVIDERS)[number];
 
 function isProvider(value: unknown): value is Provider {
-  return typeof value === "string" &&
-    PROVIDERS.includes(value as Provider);
-}
-
-function getEncryptionKey(): Buffer {
-  const value = process.env.PROVIDER_KEYS_ENCRYPTION_KEY;
-
-  if (!value || !/^[0-9a-fA-F]{64}$/.test(value)) {
-    throw new Error(
-      "PROVIDER_KEYS_ENCRYPTION_KEY must be a 64-character hex string.",
-    );
-  }
-
-  return Buffer.from(value, "hex");
-}
-
-function encryptKey(plaintext: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
-
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
-    cipher.final(),
-  ]);
-
-  const tag = cipher.getAuthTag();
-
-  return [
-    "v1",
-    iv.toString("base64url"),
-    tag.toString("base64url"),
-    ciphertext.toString("base64url"),
-  ].join(".");
-}
-
-function decryptKey(payload: string): string {
-  const [version, iv, tag, ciphertext] = payload.split(".");
-
-  if (
-    version !== "v1" ||
-    !iv ||
-    !tag ||
-    !ciphertext
-  ) {
-    throw new Error("Invalid encrypted API key format.");
-  }
-
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    getEncryptionKey(),
-    Buffer.from(iv, "base64url"),
+  return (
+    typeof value === "string" &&
+    PROVIDERS.includes(value as Provider)
   );
-
-  decipher.setAuthTag(Buffer.from(tag, "base64url"));
-
-  return Buffer.concat([
-    decipher.update(Buffer.from(ciphertext, "base64url")),
-    decipher.final(),
-  ]).toString("utf8");
 }
 
 async function authenticate(request: Request) {
@@ -107,7 +51,7 @@ function response(
 }
 
 // Check which providers have saved API keys.
-// Does not expose the actual keys.
+// Never expose actual API keys.
 export async function GET(request: Request) {
   try {
     const user = await authenticate(request);
@@ -116,18 +60,19 @@ export async function GET(request: Request) {
       return response({ error: "Unauthorized" }, 401);
     }
 
-    const url = new URL(request.url);
-    const provider = url.searchParams.get("provider");
+    const provider = new URL(request.url).searchParams.get("provider");
 
     if (provider && !isProvider(provider)) {
       return response({ error: "Invalid provider" }, 400);
     }
 
+    const userId = user._id.toString();
+
     if (provider) {
       const saved = await prisma.userProviderKey.findUnique({
         where: {
           userId_provider: {
-            userId: user._id.toString(),
+            userId,
             provider,
           },
         },
@@ -146,7 +91,7 @@ export async function GET(request: Request) {
 
     const savedKeys = await prisma.userProviderKey.findMany({
       where: {
-        userId: user._id.toString(),
+        userId,
       },
       select: {
         provider: true,
@@ -157,8 +102,8 @@ export async function GET(request: Request) {
     return response({
       providers: savedKeys,
     });
-  } catch (error) {
-    console.error("[Provider Keys GET]", error);
+  } catch {
+    console.error("[Provider Keys GET] Request failed");
 
     return response(
       { error: "Failed to load provider keys" },
@@ -176,10 +121,13 @@ export async function PUT(request: Request) {
       return response({ error: "Unauthorized" }, 401);
     }
 
-    const body = await request.json().catch(() => null);
+    const body: unknown = await request.json().catch(() => null);
 
     if (
-      !body ||
+      typeof body !== "object" ||
+      body === null ||
+      !("provider" in body) ||
+      !("apiKey" in body) ||
       !isProvider(body.provider) ||
       typeof body.apiKey !== "string"
     ) {
@@ -198,7 +146,7 @@ export async function PUT(request: Request) {
       );
     }
 
-   const encryptedKey = encryptProviderKey(apiKey);
+    const encryptedKey = encryptProviderKey(apiKey);
     const userId = user._id.toString();
 
     await prisma.userProviderKey.upsert({
@@ -223,8 +171,8 @@ export async function PUT(request: Request) {
       provider: body.provider,
       message: "API key saved securely",
     });
-  } catch (error) {
-    console.error("[Provider Keys PUT]", error);
+  } catch {
+    console.error("[Provider Keys PUT] Request failed");
 
     return response(
       { error: "Failed to save provider key" },
@@ -259,8 +207,8 @@ export async function DELETE(request: Request) {
       success: true,
       provider,
     });
-  } catch (error) {
-    console.error("[Provider Keys DELETE]", error);
+  } catch {
+    console.error("[Provider Keys DELETE] Request failed");
 
     return response(
       { error: "Failed to delete provider key" },

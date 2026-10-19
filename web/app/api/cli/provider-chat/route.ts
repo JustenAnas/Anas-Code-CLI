@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { currentCliUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decryptProviderKey } from "@/lib/provider-key-crypto";
+import { checkCliRateLimit } from "@/lib/cli-rate-limit";
 
 export const runtime = "nodejs";
 
@@ -236,6 +237,23 @@ export async function POST(request: Request) {
     if (!user) {
       return respond({ error: "Unauthorized" }, 401);
     }
+
+    const rateLimit = await checkCliRateLimit(user._id.toString());
+
+if (!rateLimit.allowed) {
+  return Response.json(
+    {
+      error: "Rate limit exceeded. Please try again shortly.",
+    },
+    {
+      status: 429,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": String(rateLimit.retryAfter),
+      },
+    },
+  );
+}
 
     const contentLength = Number(
       request.headers.get("content-length") ?? 0,
