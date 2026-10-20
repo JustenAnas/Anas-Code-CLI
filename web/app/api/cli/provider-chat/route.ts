@@ -15,22 +15,26 @@ const PROVIDERS = {
     baseURL: undefined as string | undefined,
     envKey: undefined as string | undefined,
   },
+   claude: {
+    model: "claude-sonnet-4-5",
+    label: "Claude",
+    baseURL: undefined as string | undefined,
+    envKey: "ANTHROPIC_API_KEY",
+  },
   gemini: {
-    model: process.env.GEMINI_FREE_MODEL ?? "gemini-2.5-flash",
+    model: "gemini-3.6-flash",
     label: "Gemini",
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
     envKey: "GEMINI_API_KEY",
   },
   openrouter: {
-    model:
-      process.env.OPENROUTER_FREE_MODEL ??
-      "meta-llama/llama-3.3-70b-instruct:free",
+    model: "nvidia/nemotron-3-super-120b-a12b:free",
     label: "OpenRouter",
     baseURL: "https://openrouter.ai/api/v1",
     envKey: "OPENROUTER_API_KEY",
   },
   groq: {
-    model: process.env.GROQ_FREE_MODEL ?? "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
     label: "Groq",
     baseURL: "https://api.groq.com/openai/v1",
     envKey: "GROQ_API_KEY",
@@ -227,9 +231,11 @@ async function streamResponse(
             message = `Invalid ${label} API key`;
           } else if (error.status === 429) {
             message = `${label} rate limit or quota exceeded`;
-          } else {
-            message = `${label} provider request failed`;
-          }
+          } else if (error.status === 404) {
+  message = `${label} model "${model}" was not found or is unavailable to this API key.`;
+} else {
+  message = `${label} provider request failed (${error.status ?? "unknown status"})`;
+}
         }
 
         send("error", { error: message });
@@ -401,21 +407,35 @@ export async function POST(request: Request) {
       outputTokens: completion.usage?.completion_tokens ?? 0,
     });
   } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      if (error.status === 401) {
-        return respond({ error: "Invalid provider API key" }, 401);
-      }
-      if (error.status === 429) {
-        return respond({ error: "Provider rate limit or quota exceeded" }, 429);
-      }
-      return respond({ error: "Provider request failed" }, 502);
+  if (error instanceof OpenAI.APIError) {
+    if (error.status === 401) {
+      return respond({ error: "Invalid provider API key" }, 401);
     }
 
-    console.error(
-      "[Provider Chat]",
-      error instanceof Error ? error.message : error,
-    );
+    if (error.status === 429) {
+      return respond(
+        { error: "Provider rate limit or quota exceeded" },
+        429,
+      );
+    }
 
-    return respond({ error: "Provider chat request failed" }, 500);
+    if (error.status === 404) {
+      return respond(
+        {
+          error: "The selected provider model was not found or is unavailable.",
+        },
+        502,
+      );
+    }
+
+    return respond({ error: "Provider request failed" }, 502);
   }
+
+  console.error(
+    "[Provider Chat]",
+    error instanceof Error ? error.message : error,
+  );
+
+  return respond({ error: "Provider chat request failed" }, 500);
+}
 }
