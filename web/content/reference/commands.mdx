@@ -47,10 +47,10 @@ npm run dev -- chat --mode agent
 
 ### Options
 
-| Option | Description |
-| --- | --- |
-| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`. |
-| `-v, --verbose` | Show token usage and estimated cost when supported. |
+| Option              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `-m, --mode <mode>` | Select `ask`, `agent`, or `plan`.                   |
+| `-v, --verbose`     | Show token usage and estimated cost when supported. |
 
 ### Interaction modes
 
@@ -78,8 +78,8 @@ npm run dev -- talk "Explain this project's structure"
 
 ### Options
 
-| Option | Description |
-| --- | --- |
+| Option          | Description                                         |
+| --------------- | --------------------------------------------------- |
 | `-v, --verbose` | Show token usage and estimated cost when supported. |
 
 This command runs a one-shot query rather than starting an interactive chat session.
@@ -96,13 +96,13 @@ npm run dev -- doctor
 
 The command checks whether Node.js 18 or higher is installed and reports the configuration status of these providers:
 
-| Provider | Environment variable |
-| --- | --- |
-| Claude | `ANTHROPIC_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
+| Provider   | Environment variable |
+| ---------- | -------------------- |
+| Claude     | `ANTHROPIC_API_KEY`  |
+| OpenAI     | `OPENAI_API_KEY`     |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini | `GEMINI_API_KEY` |
-| Groq | `GROQ_API_KEY` |
+| Gemini     | `GEMINI_API_KEY`     |
+| Groq       | `GROQ_API_KEY`       |
 
 The command checks whether keys are configured. It does not guarantee that a key is valid or that the provider account has available credits.
 
@@ -151,11 +151,11 @@ ANAS Cloud supports authenticated provider-key management.
 
 Available backend operations include:
 
-| Operation | Description |
-| --- | --- |
-| Check | Determine whether a provider key is saved. |
-| Save | Store or replace a provider key. |
-| Delete | Remove a saved provider key. |
+| Operation | Description                                |
+| --------- | ------------------------------------------ |
+| Check     | Determine whether a provider key is saved. |
+| Save      | Store or replace a provider key.           |
+| Delete    | Remove a saved provider key.               |
 
 Saved provider keys are encrypted using AES-256-GCM before database storage.
 
@@ -222,16 +222,16 @@ The reported version depends on the installed ANAS CLI release.
 
 These commands are available inside an interactive chat session:
 
-| Command | Description |
-| --- | --- |
-| `/help` | Show available chat commands. |
-| `/exit` | Exit the chat session. |
-| `/new` | Start a new conversation. |
-| `/history` | View conversation history. |
-| `/resume` | Resume a conversation. |
-| `/mode ask` | Switch to Ask mode. |
-| `/mode agent` | Switch to Agent mode. |
-| `/mode plan` | Switch to Plan mode. |
+| Command       | Description                   |
+| ------------- | ----------------------------- |
+| `/help`       | Show available chat commands. |
+| `/exit`       | Exit the chat session.        |
+| `/new`        | Start a new conversation.     |
+| `/history`    | View conversation history.    |
+| `/resume`     | Resume a conversation.        |
+| `/mode ask`   | Switch to Ask mode.           |
+| `/mode agent` | Switch to Agent mode.         |
+| `/mode plan`  | Switch to Plan mode.          |
 
 Unknown slash commands display the available command help.
 

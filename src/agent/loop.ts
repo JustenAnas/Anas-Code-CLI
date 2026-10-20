@@ -366,8 +366,9 @@ export async function runAgentLoop(
       // the existing permission and guardrail behavior.
       for (const toolCall of toolCalls) {
         if (!allowedTools.includes(toolCall.name)) {
-          const message = `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${allowedTools.join(", ") || "none"
-            }.`;
+          const message = `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
+            allowedTools.join(", ") || "none"
+          }.`;
 
           onStatus?.(`[Blocked: ${toolCall.name} not allowed in ${mode} mode]`);
 
@@ -429,7 +430,7 @@ export async function runAgentLoop(
       continue;
     }
 
-        if (!toolCall) {
+    if (!toolCall) {
       if (!response.content?.trim()) {
         onStatus?.(
           "[Error] The provider returned an empty response. Check your provider, API key, or ANAS Cloud login.",
@@ -446,11 +447,13 @@ export async function runAgentLoop(
         return parsePlan(response.content);
       }
 
-      void updateMemory(session.memory, history, provider).then((memory) => {
-        session.memory = memory;
-      }).catch(() => {
-        // Memory updates are optional; don't delay the next prompt.
-      });
+      void updateMemory(session.memory, history, provider)
+        .then((memory) => {
+          session.memory = memory;
+        })
+        .catch(() => {
+          // Memory updates are optional; don't delay the next prompt.
+        });
 
       break;
     }
@@ -465,8 +468,9 @@ export async function runAgentLoop(
 
       history.push({
         role: "user",
-        content: `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${allowedTools.join(", ") || "none"
-          }.`,
+        content: `Tool "${toolCall.name}" is not allowed in ${mode} mode. Only these tools are available: ${
+          allowedTools.join(", ") || "none"
+        }.`,
       });
 
       continue;

@@ -1,25 +1,15 @@
-
 import { currentCliUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptProviderKey } from "@/lib/provider-key-crypto";
 
 export const runtime = "nodejs";
 
-const PROVIDERS = [
-  "claude",
-  "openai",
-  "gemini",
-  "openrouter",
-  "groq",
-] as const;
+const PROVIDERS = ["claude", "openai", "gemini", "openrouter", "groq"] as const;
 
 type Provider = (typeof PROVIDERS)[number];
 
 function isProvider(value: unknown): value is Provider {
-  return (
-    typeof value === "string" &&
-    PROVIDERS.includes(value as Provider)
-  );
+  return typeof value === "string" && PROVIDERS.includes(value as Provider);
 }
 
 async function authenticate(request: Request) {
@@ -38,10 +28,7 @@ async function authenticate(request: Request) {
   return currentCliUser(token);
 }
 
-function response(
-  body: Record<string, unknown>,
-  status = 200,
-) {
+function response(body: Record<string, unknown>, status = 200) {
   return Response.json(body, {
     status,
     headers: {
@@ -105,10 +92,7 @@ export async function GET(request: Request) {
   } catch {
     console.error("[Provider Keys GET] Request failed");
 
-    return response(
-      { error: "Failed to load provider keys" },
-      500,
-    );
+    return response({ error: "Failed to load provider keys" }, 500);
   }
 }
 
@@ -131,19 +115,13 @@ export async function PUT(request: Request) {
       !isProvider(body.provider) ||
       typeof body.apiKey !== "string"
     ) {
-      return response(
-        { error: "Provider and API key are required" },
-        400,
-      );
+      return response({ error: "Provider and API key are required" }, 400);
     }
 
     const apiKey = body.apiKey.trim();
 
     if (!apiKey || apiKey.length > 4096) {
-      return response(
-        { error: "Invalid API key length" },
-        400,
-      );
+      return response({ error: "Invalid API key length" }, 400);
     }
 
     const encryptedKey = encryptProviderKey(apiKey);
@@ -174,10 +152,7 @@ export async function PUT(request: Request) {
   } catch {
     console.error("[Provider Keys PUT] Request failed");
 
-    return response(
-      { error: "Failed to save provider key" },
-      500,
-    );
+    return response({ error: "Failed to save provider key" }, 500);
   }
 }
 
@@ -210,9 +185,6 @@ export async function DELETE(request: Request) {
   } catch {
     console.error("[Provider Keys DELETE] Request failed");
 
-    return response(
-      { error: "Failed to delete provider key" },
-      500,
-    );
+    return response({ error: "Failed to delete provider key" }, 500);
   }
 }

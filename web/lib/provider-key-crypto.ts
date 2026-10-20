@@ -1,11 +1,6 @@
-
 import "server-only";
 
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 function getEncryptionKey(): Buffer {
   const value = process.env.PROVIDER_KEYS_ENCRYPTION_KEY;
@@ -23,11 +18,7 @@ function getEncryptionKey(): Buffer {
 export function encryptProviderKey(apiKey: string): string {
   const iv = randomBytes(12);
 
-  const cipher = createCipheriv(
-    "aes-256-gcm",
-    getEncryptionKey(),
-    iv,
-  );
+  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
 
   const encrypted = Buffer.concat([
     cipher.update(apiKey, "utf8"),
@@ -66,11 +57,7 @@ export function decryptProviderKey(payload: string): string {
     throw new Error("Invalid encrypted API key metadata.");
   }
 
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    getEncryptionKey(),
-    iv,
-  );
+  const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), iv);
 
   decipher.setAuthTag(authTag);
 

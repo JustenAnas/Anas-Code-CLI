@@ -1,4 +1,3 @@
-
 import type {
   BaseProvider,
   Message,
@@ -147,8 +146,8 @@ function toApiMessages(messages: Message[], systemPrompt?: string) {
     }
 
     if (message.role === "assistant") {
-      const calls = message.toolCalls ??
-        (message.toolCall ? [message.toolCall] : []);
+      const calls =
+        message.toolCalls ?? (message.toolCall ? [message.toolCall] : []);
 
       result.push({
         role: "assistant",
@@ -197,10 +196,7 @@ export class CloudOpenAIProvider implements BaseProvider {
 
   constructor(
     private readonly cloudProvider:
-      | "openai"
-      | "gemini"
-      | "openrouter"
-      | "groq" = "openai",
+      "openai" | "gemini" | "openrouter" | "groq" = "openai",
     private readonly useOwnKey = false,
   ) {
     this.name = cloudProvider;
@@ -208,8 +204,7 @@ export class CloudOpenAIProvider implements BaseProvider {
 
   private get apiUrl(): string {
     return (
-      process.env.ANAS_CLOUD_API_URL ??
-      "https://anas-cli.vercel.app"
+      process.env.ANAS_CLOUD_API_URL ?? "https://anas-cli.vercel.app"
     ).replace(/\/$/, "");
   }
 
@@ -231,23 +226,20 @@ export class CloudOpenAIProvider implements BaseProvider {
     systemPrompt: string | undefined,
     stream: boolean,
   ): Promise<Response> {
-    const response = await fetch(
-      `${this.apiUrl}/api/cli/provider-chat`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-                   provider: this.cloudProvider,
-          useOwnKey: this.useOwnKey,
-          messages: toApiMessages(messages, systemPrompt),
-          tools: TOOLS,
-          stream,
-        }),
+    const response = await fetch(`${this.apiUrl}/api/cli/provider-chat`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        provider: this.cloudProvider,
+        useOwnKey: this.useOwnKey,
+        messages: toApiMessages(messages, systemPrompt),
+        tools: TOOLS,
+        stream,
+      }),
+    });
 
     if (!response.ok) {
       let message = `Cloud request failed (${response.status})`;
@@ -264,8 +256,7 @@ export class CloudOpenAIProvider implements BaseProvider {
       throw new ProviderError(
         message,
         response.status,
-        response.status === 429 ||
-          response.status >= 500,
+        response.status === 429 || response.status >= 500,
       );
     }
 
@@ -276,11 +267,7 @@ export class CloudOpenAIProvider implements BaseProvider {
     messages: Message[],
     systemPrompt?: string,
   ): Promise<ProviderResponse> {
-    const response = await this.request(
-      messages,
-      systemPrompt,
-      false,
-    );
+    const response = await this.request(messages, systemPrompt, false);
 
     const body = (await response.json()) as {
       content?: string;
@@ -305,16 +292,10 @@ export class CloudOpenAIProvider implements BaseProvider {
     onChunk: (chunk: string) => void,
     systemPrompt?: string,
   ): Promise<ProviderResponse> {
-    const response = await this.request(
-      messages,
-      systemPrompt,
-      true,
-    );
+    const response = await this.request(messages, systemPrompt, true);
 
     if (!response.body) {
-      throw new ProviderError(
-        "Cloud response stream is empty.",
-      );
+      throw new ProviderError("Cloud response stream is empty.");
     }
 
     const reader = response.body.getReader();
@@ -387,9 +368,7 @@ export class CloudOpenAIProvider implements BaseProvider {
       }
 
       if (!completed) {
-        throw new ProviderError(
-          "Cloud stream ended before completion.",
-        );
+        throw new ProviderError("Cloud stream ended before completion.");
       }
     } finally {
       reader.releaseLock();

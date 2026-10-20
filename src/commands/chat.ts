@@ -4,10 +4,7 @@ import { fmt } from "../ui/format.js";
 import ora from "ora";
 import chalk from "chalk";
 import type { CliMode } from "../agent/modes.js";
-import {
-  createProvider,
-  type ProviderName,
-} from "../providers/factory.js";
+import { createProvider, type ProviderName } from "../providers/factory.js";
 import { runAgentLoop } from "../agent/loop.js";
 import { buildProjectContext } from "../agent/context.js";
 import type { Plan } from "../agent/plan.js";
@@ -17,12 +14,7 @@ import { SessionStore } from "../agent/session-store.js";
 import { resolveFileReferences } from "../agent/file-references.js";
 import { cloudClient } from "../cloud/client.js";
 import { execFileSync } from "node:child_process";
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -62,9 +54,7 @@ async function pasteFromEditor(): Promise<string | null> {
   }
 }
 
-export async function startChat(
-  options: ChatOptions = {},
-): Promise<void> {
+export async function startChat(options: ChatOptions = {}): Promise<void> {
   let {
     mode = "agent",
     verbose = false,
@@ -72,15 +62,15 @@ export async function startChat(
     model,
   } = options;
 
- let provider: ReturnType<typeof createProvider>;
-try {
-  provider = createProvider(providerName, model);
-} catch (error) {
-  console.error(
-    fmt.error(error instanceof Error ? error.message : String(error)),
-  );
-  return;
-}
+  let provider: ReturnType<typeof createProvider>;
+  try {
+    provider = createProvider(providerName, model);
+  } catch (error) {
+    console.error(
+      fmt.error(error instanceof Error ? error.message : String(error)),
+    );
+    return;
+  }
   const context = await buildProjectContext();
 
   const sessionStore = new SessionStore();
@@ -98,9 +88,7 @@ try {
 
       await cloudClient.saveSession({
         localSessionId: session.id,
-        title:
-          firstUserMessage?.content.slice(0, 80) ||
-          "ANAS CLI session",
+        title: firstUserMessage?.content.slice(0, 80) || "ANAS CLI session",
         workingDirectory: process.cwd(),
       });
 
@@ -127,12 +115,10 @@ try {
   console.log(
     fmt.mode(
       `Chat started · provider: ${provider.name} · mode: ${mode}` +
-      (model ? ` · model: ${model}` : ""),
+        (model ? ` · model: ${model}` : ""),
     ),
   );
-  console.log(
-    fmt.dim("Type /help for commands, /exit to quit.\n"),
-  );
+  console.log(fmt.dim("Type /help for commands, /exit to quit.\n"));
 
   let running = true;
 
@@ -193,13 +179,10 @@ try {
     if (command.type === "resume") {
       const localSessions = sessionStore
         .getAll()
-        .filter(
-          (storedSession) => storedSession.id !== session.id,
-        );
+        .filter((storedSession) => storedSession.id !== session.id);
 
-      let cloudSessions: Awaited<
-        ReturnType<typeof cloudClient.listSessions>
-      > = [];
+      let cloudSessions: Awaited<ReturnType<typeof cloudClient.listSessions>> =
+        [];
 
       if (cloudClient.isLoggedIn) {
         try {
@@ -207,7 +190,8 @@ try {
         } catch (error) {
           console.error(
             fmt.error(
-              `Could not load cloud sessions: ${error instanceof Error ? error.message : error
+              `Could not load cloud sessions: ${
+                error instanceof Error ? error.message : error
               }`,
             ),
           );
@@ -259,8 +243,7 @@ try {
 
         try {
           const cloudSession = availableCloudSessions.find(
-            (item) =>
-              item.localSessionId === localSessionId,
+            (item) => item.localSessionId === localSessionId,
           );
 
           if (!cloudSession) {
@@ -268,8 +251,7 @@ try {
             continue;
           }
 
-          const cloudMessages =
-            await cloudClient.listMessages(localSessionId);
+          const cloudMessages = await cloudClient.listMessages(localSessionId);
 
           const restoredMessages = cloudMessages
             .filter((message) => message.role !== "system")
@@ -277,15 +259,9 @@ try {
               role: message.role as "assistant" | "user" | "tool",
               content: message.content,
               localMessageId: message.localMessageId,
-              ...(message.toolCallId
-                ? { toolCallId: message.toolCallId }
-                : {}),
-              ...(message.toolCall
-                ? { toolCall: message.toolCall }
-                : {}),
-              ...(message.toolCalls
-                ? { toolCalls: message.toolCalls }
-                : {}),
+              ...(message.toolCallId ? { toolCallId: message.toolCallId } : {}),
+              ...(message.toolCall ? { toolCall: message.toolCall } : {}),
+              ...(message.toolCalls ? { toolCalls: message.toolCalls } : {}),
             }));
 
           session = sessionStore.restore(
@@ -297,7 +273,8 @@ try {
         } catch (error) {
           console.error(
             fmt.error(
-              `Could not resume cloud session: ${error instanceof Error ? error.message : error
+              `Could not resume cloud session: ${
+                error instanceof Error ? error.message : error
               }`,
             ),
           );
@@ -306,9 +283,7 @@ try {
       }
 
       console.log(
-        fmt.mode(
-          `\nSession resumed · ${session.messages.length} messages.\n`,
-        ),
+        fmt.mode(`\nSession resumed · ${session.messages.length} messages.\n`),
       );
       continue;
     }
@@ -351,35 +326,27 @@ try {
 
           if (firstChunk) {
             spinner?.stop();
-            process.stdout.write(
-              fmt.assistant("Assistant: "),
-            );
+            process.stdout.write(fmt.assistant("Assistant: "));
             firstChunk = false;
           }
 
           process.stdout.write(chunk);
         },
         (status) => {
-                    if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
+          if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
             spinner?.stop();
             console.error(fmt.error(status));
             return;
           }
           if (status.startsWith("[Using tool: ")) {
-            const tool = status
-              .replace("[Using tool: ", "")
-              .replace("]", "");
+            const tool = status.replace("[Using tool: ", "").replace("]", "");
 
             if (firstChunk) {
-              spinner?.start(
-                chalk.cyan(`Executing ${tool}…`),
-              );
+              spinner?.start(chalk.cyan(`Executing ${tool}…`));
             }
           } else if (status.startsWith("[Retry ")) {
             if (firstChunk) {
-              spinner?.start(
-                chalk.yellow("Retrying request…"),
-              );
+              spinner?.start(chalk.yellow("Retrying request…"));
             }
           }
 
@@ -418,9 +385,7 @@ try {
 
           const executionPrompt = `Execute this plan step by step:
 
-${plan.steps
-              .map((step, index) => `${index + 1}. ${step}`)
-              .join("\n")}`;
+${plan.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
           let executionFirstChunk = true;
 
@@ -435,16 +400,14 @@ ${plan.steps
             session,
             (chunk) => {
               if (executionFirstChunk) {
-                process.stdout.write(
-                  fmt.assistant("Assistant: "),
-                );
+                process.stdout.write(fmt.assistant("Assistant: "));
                 executionFirstChunk = false;
               }
 
               process.stdout.write(chunk);
             },
             (status) => {
-                            if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
+              if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
                 console.error(fmt.error(status));
                 return;
               }
@@ -466,16 +429,12 @@ ${plan.steps
       spinner?.stop();
 
       console.error(
-        fmt.error(
-          `Error: ${error instanceof Error ? error.message : error
-          }`,
-        ),
+        fmt.error(`Error: ${error instanceof Error ? error.message : error}`),
       );
-    }  finally {
-  await syncConversation();
-}
+    } finally {
+      await syncConversation();
+    }
   }
 
   console.log(fmt.dim("Session ended."));
 }
-

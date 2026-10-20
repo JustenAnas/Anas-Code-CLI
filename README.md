@@ -1,4 +1,3 @@
-
 <div align="center">
 
 # ANAS CLI
@@ -37,28 +36,28 @@ The goal is straightforward: **give developers an AI coding assistant without lo
 
 ## Features
 
-| Feature | Description |
-|---|---|
-| **Three execution modes** | Agent, Ask, and Plan, each with different tool permissions |
-| **Agentic execution loop** | Multi-step reasoning, native tool calling, tool-result processing, and text-based fallback |
-| **Multi-provider support** | OpenAI, Anthropic Claude, Google Gemini, OpenRouter, and Groq |
-| **Streaming responses** | Display model output as it arrives |
-| **Native function calling** | Process multiple model-generated tool calls sequentially |
-| **Verification workflow** | Instruct the agent to inspect and test changes before reporting completion |
-| **Permission system** | Request confirmation for sensitive operations |
-| **Protected paths** | Restrict access to sensitive files and directories |
-| **Guardrails** | Validate operations and reduce unsafe or unauthorized actions |
-| **History management** | Trim and compact conversation history |
-| **Token and cost estimates** | Report token usage and estimated request costs |
-| **Interactive chat** | Multi-turn conversations with slash commands |
-| **Cloud authentication** | Authenticate with an ANAS Cloud account |
-| **Cloud sessions** | Persist conversations through a cloud API backed by a database |
-| **Session restoration** | Resume saved conversations using `/resume` |
-| **Persistent memory** | Store agent memory in the cloud independently of the AI provider |
-| **Cloud-backed OpenAI** | Use an OpenAI API key stored in ANAS Cloud |
-| **Cloud rate limiting** | Per-user request throttling |
-| **Persistent configuration** | Remember provider and mode preferences |
-| **Windows support** | Execute commands using Windows CMD |
+| Feature                      | Description                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------ |
+| **Three execution modes**    | Agent, Ask, and Plan, each with different tool permissions                                 |
+| **Agentic execution loop**   | Multi-step reasoning, native tool calling, tool-result processing, and text-based fallback |
+| **Multi-provider support**   | OpenAI, Anthropic Claude, Google Gemini, OpenRouter, and Groq                              |
+| **Streaming responses**      | Display model output as it arrives                                                         |
+| **Native function calling**  | Process multiple model-generated tool calls sequentially                                   |
+| **Verification workflow**    | Instruct the agent to inspect and test changes before reporting completion                 |
+| **Permission system**        | Request confirmation for sensitive operations                                              |
+| **Protected paths**          | Restrict access to sensitive files and directories                                         |
+| **Guardrails**               | Validate operations and reduce unsafe or unauthorized actions                              |
+| **History management**       | Trim and compact conversation history                                                      |
+| **Token and cost estimates** | Report token usage and estimated request costs                                             |
+| **Interactive chat**         | Multi-turn conversations with slash commands                                               |
+| **Cloud authentication**     | Authenticate with an ANAS Cloud account                                                    |
+| **Cloud sessions**           | Persist conversations through a cloud API backed by a database                             |
+| **Session restoration**      | Resume saved conversations using `/resume`                                                 |
+| **Persistent memory**        | Store agent memory in the cloud independently of the AI provider                           |
+| **Cloud-backed OpenAI**      | Use an OpenAI API key stored in ANAS Cloud                                                 |
+| **Cloud rate limiting**      | Per-user request throttling                                                                |
+| **Persistent configuration** | Remember provider and mode preferences                                                     |
+| **Windows support**          | Execute commands using Windows CMD                                                         |
 
 ## Documentation
 
@@ -183,11 +182,11 @@ Run `anas <command> --help` to inspect available command options.
 
 ANAS CLI provides three execution modes.
 
-| Mode | Purpose | Tool access | File modifications |
-|---|---|---|---|
-| `agent` | Complete coding tasks | All permitted tools | Yes, subject to permissions |
-| `ask` | Explore and understand code | Read-only tools | No |
-| `plan` | Generate an implementation plan | No tools | No |
+| Mode    | Purpose                         | Tool access         | File modifications          |
+| ------- | ------------------------------- | ------------------- | --------------------------- |
+| `agent` | Complete coding tasks           | All permitted tools | Yes, subject to permissions |
+| `ask`   | Explore and understand code     | Read-only tools     | No                          |
+| `plan`  | Generate an implementation plan | No tools            | No                          |
 
 ### Agent mode
 
@@ -228,29 +227,29 @@ Inside an interactive session:
 
 ## CLI Commands
 
-| Command | Description |
-|---|---|
-| `anas hello` | Display a greeting |
-| `anas wakeup` | Launch the guided startup workflow |
-| `anas chat` | Start an interactive coding session |
-| `anas talk <prompt>` | Execute a one-shot prompt |
-| `anas doctor` | Check environment readiness |
-| `anas banner` | Display the CLI banner |
-| `anas login` | Authenticate with ANAS Cloud |
-| `anas logout` | Sign out of ANAS Cloud |
+| Command              | Description                         |
+| -------------------- | ----------------------------------- |
+| `anas hello`         | Display a greeting                  |
+| `anas wakeup`        | Launch the guided startup workflow  |
+| `anas chat`          | Start an interactive coding session |
+| `anas talk <prompt>` | Execute a one-shot prompt           |
+| `anas doctor`        | Check environment readiness         |
+| `anas banner`        | Display the CLI banner              |
+| `anas login`         | Authenticate with ANAS Cloud        |
+| `anas logout`        | Sign out of ANAS Cloud              |
 
 ### Interactive slash commands
 
-| Command | Description |
-|---|---|
-| `/help` | Display available commands |
-| `/mode` | Change the execution mode |
+| Command     | Description                             |
+| ----------- | --------------------------------------- |
+| `/help`     | Display available commands              |
+| `/mode`     | Change the execution mode               |
 | `/provider` | Change the AI provider, where supported |
-| `/history` | Inspect conversation history |
-| `/resume` | Restore an existing session |
-| `/new` | Create a new session |
-| `/clear` | Clear conversation context |
-| `/exit` | Exit interactive chat |
+| `/history`  | Inspect conversation history            |
+| `/resume`   | Restore an existing session             |
+| `/new`      | Create a new session                    |
+| `/clear`    | Clear conversation context              |
+| `/exit`     | Exit interactive chat                   |
 
 Some commands may depend on the current CLI version.
 
@@ -258,16 +257,16 @@ Some commands may depend on the current CLI version.
 
 ANAS CLI exposes development tools through a shared execution interface.
 
-| Tool | Description | Permission |
-|---|---|---|
-| `read_file` | Read file contents | Read-only |
-| `write_file` | Create or overwrite files | Confirmation required |
-| `edit_file` | Replace exact text in existing files | Confirmation required |
-| `bash` | Execute terminal commands | Confirmation required |
-| `glob` | Find files using patterns | Read-only |
-| `list_dir` | List directory contents | Read-only |
-| `search_code` | Search source code contents | Read-only |
-| `git` | Inspect Git repository state | Read-only operations |
+| Tool          | Description                          | Permission            |
+| ------------- | ------------------------------------ | --------------------- |
+| `read_file`   | Read file contents                   | Read-only             |
+| `write_file`  | Create or overwrite files            | Confirmation required |
+| `edit_file`   | Replace exact text in existing files | Confirmation required |
+| `bash`        | Execute terminal commands            | Confirmation required |
+| `glob`        | Find files using patterns            | Read-only             |
+| `list_dir`    | List directory contents              | Read-only             |
+| `search_code` | Search source code contents          | Read-only             |
+| `git`         | Inspect Git repository state         | Read-only operations  |
 
 ### Tool execution
 
@@ -299,13 +298,13 @@ Paths outside the workspace are rejected by the tool layer.
 
 ANAS CLI uses a shared `BaseProvider` interface.
 
-| Provider | Environment variable | Notes |
-|---|---|---|
-| OpenAI | `OPENAI_API_KEY` | Local or cloud-backed provider |
-| Anthropic Claude | `ANTHROPIC_API_KEY` | Claude models |
-| Google Gemini | `GEMINI_API_KEY` | Gemini models |
-| OpenRouter | `OPENROUTER_API_KEY` | Configurable model selection |
-| Groq | `GROQ_API_KEY` | Groq-hosted models |
+| Provider         | Environment variable | Notes                          |
+| ---------------- | -------------------- | ------------------------------ |
+| OpenAI           | `OPENAI_API_KEY`     | Local or cloud-backed provider |
+| Anthropic Claude | `ANTHROPIC_API_KEY`  | Claude models                  |
+| Google Gemini    | `GEMINI_API_KEY`     | Gemini models                  |
+| OpenRouter       | `OPENROUTER_API_KEY` | Configurable model selection   |
+| Groq             | `GROQ_API_KEY`       | Groq-hosted models             |
 
 Each provider implements the common messaging interface.
 
@@ -315,13 +314,13 @@ interface BaseProvider {
 
   sendMessage(
     messages: Message[],
-    systemPrompt?: string
+    systemPrompt?: string,
   ): Promise<ProviderResponse>;
 
   streamMessage(
     messages: Message[],
     onChunk: (chunk: string) => void,
-    systemPrompt?: string
+    systemPrompt?: string,
   ): Promise<ProviderResponse>;
 }
 ```

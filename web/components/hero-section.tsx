@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -78,9 +77,7 @@ export default function HeroSection() {
       <div className="absolute w-full h-dvh max-h-155 sm:max-h-115 md:max-h-125 lg:max-h-190 xl:max-h-195">
         <Dither
           waveColor={[
-            0.30980392156862746,
-            0.30980392156862746,
-            0.30980392156862746,
+            0.30980392156862746, 0.30980392156862746, 0.30980392156862746,
           ]}
           disableAnimation={false}
           enableMouseInteraction

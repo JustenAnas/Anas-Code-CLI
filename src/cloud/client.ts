@@ -1,4 +1,3 @@
-
 import { config } from "../config/user-config.js";
 import { getCloudApiUrl } from "../commands/cloud-auth.js";
 import type { ToolCall } from "../providers/base.js";
@@ -55,16 +54,11 @@ export class CloudClient {
     return Boolean(this.token);
   }
 
-  async request<T>(
-    path: string,
-    options: RequestInit = {},
-  ): Promise<T> {
+  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.token;
 
     if (!token) {
-      throw new Error(
-        "Not logged in to ANAS Cloud. Run: anas login",
-      );
+      throw new Error("Not logged in to ANAS Cloud. Run: anas login");
     }
 
     const controller = new AbortController();
@@ -93,22 +87,16 @@ export class CloudClient {
           headers: {
             ...options.headers,
             Authorization: `Bearer ${token}`,
-            ...(options.body
-              ? { "Content-Type": "application/json" }
-              : {}),
+            ...(options.body ? { "Content-Type": "application/json" } : {}),
           },
         });
       } catch (error) {
         if (controller.signal.aborted) {
           if (options.signal?.aborted) {
-            throw new Error(
-              "ANAS Cloud request was cancelled.",
-            );
+            throw new Error("ANAS Cloud request was cancelled.");
           }
 
-          throw new Error(
-            "ANAS Cloud request timed out after 30 seconds.",
-          );
+          throw new Error("ANAS Cloud request timed out after 30 seconds.");
         }
 
         throw new Error(
@@ -139,12 +127,10 @@ export class CloudClient {
       }
 
       if (!response.ok) {
-        const retryAfter =
-          response.headers.get("Retry-After") ?? undefined;
+        const retryAfter = response.headers.get("Retry-After") ?? undefined;
 
         const message =
-          result?.error ??
-          `ANAS Cloud request failed (${response.status})`;
+          result?.error ?? `ANAS Cloud request failed (${response.status})`;
 
         throw new CloudRequestError(
           response.status === 429 && retryAfter
@@ -165,10 +151,7 @@ export class CloudClient {
     } finally {
       clearTimeout(timeout);
 
-      options.signal?.removeEventListener(
-        "abort",
-        onAbort,
-      );
+      options.signal?.removeEventListener("abort", onAbort);
     }
   }
 
@@ -195,16 +178,10 @@ export class CloudClient {
     return result.session;
   }
 
-  async listMessages(
-    localSessionId: string,
-  ): Promise<CloudMessage[]> {
+  async listMessages(localSessionId: string): Promise<CloudMessage[]> {
     const result = await this.request<{
       messages: CloudMessage[];
-    }>(
-      `/api/cloud/sessions/${encodeURIComponent(
-        localSessionId,
-      )}/messages`,
-    );
+    }>(`/api/cloud/sessions/${encodeURIComponent(localSessionId)}/messages`);
 
     return result.messages;
   }
@@ -222,15 +199,10 @@ export class CloudClient {
   ): Promise<CloudMessage> {
     const result = await this.request<{
       message: CloudMessage;
-    }>(
-      `/api/cloud/sessions/${encodeURIComponent(
-        localSessionId,
-      )}/messages`,
-      {
-        method: "POST",
-        body: JSON.stringify(input),
-      },
-    );
+    }>(`/api/cloud/sessions/${encodeURIComponent(localSessionId)}/messages`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
 
     return result.message;
   }
@@ -243,10 +215,7 @@ export class CloudClient {
     return result.memories;
   }
 
-  async saveMemory(
-    key: string,
-    content: string,
-  ): Promise<CloudMemory> {
+  async saveMemory(key: string, content: string): Promise<CloudMemory> {
     const result = await this.request<{
       memory: CloudMemory;
     }>("/api/cloud/memory", {
@@ -270,27 +239,19 @@ export class CloudClient {
     const result = await this.request<{
       provider: string;
       exists: boolean;
-    }>(
-      `/api/cli/provider-keys?provider=${encodeURIComponent(provider)}`,
-    );
+    }>(`/api/cli/provider-keys?provider=${encodeURIComponent(provider)}`);
 
     return result.exists;
   }
 
-  async saveProviderKey(
-    provider: string,
-    apiKey: string,
-  ): Promise<void> {
-    await this.request<{ success: boolean }>(
-      "/api/cli/provider-keys",
-      {
-        method: "PUT",
-        body: JSON.stringify({
-          provider,
-          apiKey,
-        }),
-      },
-    );
+  async saveProviderKey(provider: string, apiKey: string): Promise<void> {
+    await this.request<{ success: boolean }>("/api/cli/provider-keys", {
+      method: "PUT",
+      body: JSON.stringify({
+        provider,
+        apiKey,
+      }),
+    });
   }
 
   async deleteProviderKey(provider: string): Promise<void> {

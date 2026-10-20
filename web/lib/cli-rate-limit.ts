@@ -1,4 +1,3 @@
-
 import { getDb } from "@/lib/mongodb";
 
 const LIMIT = 30;

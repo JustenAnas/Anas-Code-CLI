@@ -1,4 +1,3 @@
-
 import { select } from "@inquirer/prompts";
 
 type ToolInput = Record<string, string>;

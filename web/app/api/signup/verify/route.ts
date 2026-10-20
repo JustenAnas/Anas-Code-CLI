@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
-import { normalizeEmail, otpHash, sha256 } from "@/lib/auth";
+import { normalizeEmail, otpHash } from "@/lib/auth";
+import { sendWelcomeEmail } from "@/lib/mail";
 import { badRequest, json, otpSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -50,6 +51,13 @@ export async function POST(request: Request) {
   await db.collection("pendingSignups").deleteOne({
     _id: record._id,
   });
+
+  // Send welcome email only after successful account creation.
+  try {
+    await sendWelcomeEmail(record.email, record.name);
+  } catch (error) {
+    console.error("Failed to send signup welcome email:", error);
+  }
 
   return json({
     verified: true,

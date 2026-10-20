@@ -137,14 +137,14 @@ A failed cloud operation does not mean that the memory was successfully saved re
 
 ## Local vs. cloud memory
 
-| Feature | Local memory | Cloud memory |
-| --- | --- | --- |
-| Stored in current CLI process | Yes | Loaded into the process when available |
-| Requires cloud authentication | No | Yes |
-| Requires internet access | No | Yes |
-| Persists after CLI restart | No | When successfully saved and retrieved |
-| Can provide context to the agent | Yes | Yes, after successful retrieval |
-| Automatically available across every provider | Depends on integration | Not guaranteed for every provider |
+| Feature                                       | Local memory           | Cloud memory                           |
+| --------------------------------------------- | ---------------------- | -------------------------------------- |
+| Stored in current CLI process                 | Yes                    | Loaded into the process when available |
+| Requires cloud authentication                 | No                     | Yes                                    |
+| Requires internet access                      | No                     | Yes                                    |
+| Persists after CLI restart                    | No                     | When successfully saved and retrieved  |
+| Can provide context to the agent              | Yes                    | Yes, after successful retrieval        |
+| Automatically available across every provider | Depends on integration | Not guaranteed for every provider      |
 
 ## Memory update lifecycle
 
@@ -165,13 +165,13 @@ The update process should not be confused with saving a complete conversation se
 
 ## Memory and conversation history
 
-| Feature | Purpose |
-| --- | --- |
-| Memory | Retains selected durable information |
-| Conversation history | Stores messages within a session |
-| Context compaction | Summarizes older messages when history grows |
-| Project context | Supplies a shallow view of workspace structure |
-| File references | Include contents of explicitly referenced files |
+| Feature              | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| Memory               | Retains selected durable information            |
+| Conversation history | Stores messages within a session                |
+| Context compaction   | Summarizes older messages when history grows    |
+| Project context      | Supplies a shallow view of workspace structure  |
+| File references      | Include contents of explicitly referenced files |
 
 Memory does not replace conversation history.
 

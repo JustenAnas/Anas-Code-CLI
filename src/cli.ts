@@ -111,8 +111,8 @@ export function createCli() {
     });
 
   program.action(async () => {
-  await wakeUp({ verbose: false });
-});
+    await wakeUp({ verbose: false });
+  });
 
   return program;
 }

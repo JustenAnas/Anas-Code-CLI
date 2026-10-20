@@ -49,11 +49,11 @@ The limit uses fixed one-minute windows. Multiple model calls made by an agent w
 
 ANAS CLI provides three modes:
 
-| Mode | Tool access |
-| --- | --- |
-| Ask | Read-only tools: `read_file`, `search_code`, `glob`, `list_dir` |
-| Plan | No registered tools enabled |
-| Agent | All registered tools, subject to permissions and guardrails |
+| Mode  | Tool access                                                     |
+| ----- | --------------------------------------------------------------- |
+| Ask   | Read-only tools: `read_file`, `search_code`, `glob`, `list_dir` |
+| Plan  | No registered tools enabled                                     |
+| Agent | All registered tools, subject to permissions and guardrails     |
 
 In Agent mode, terminal commands and file writes/edits require permission. Workspace-boundary checks restrict file operations, and protected-path checks guard sensitive files and directories. The `read_file` tool also attempts to redact detected secrets; detection is not guaranteed to catch every secret.
 

@@ -6,11 +6,7 @@ import { getApiKey } from "../config/env.js";
 import { config } from "../config/user-config.js";
 
 export type ProviderName =
-  | "claude"
-  | "openai"
-  | "openrouter"
-  | "gemini"
-  | "groq";
+  "claude" | "openai" | "openrouter" | "gemini" | "groq";
 
 export function createProvider(
   name: ProviderName,

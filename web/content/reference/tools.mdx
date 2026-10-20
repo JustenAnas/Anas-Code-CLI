@@ -13,31 +13,31 @@ Tool availability depends on the selected interaction mode. Operations are also 
 
 ANAS CLI currently provides eight registered tools.
 
-| Tool | Purpose |
-| --- | --- |
-| `read_file` | Read file contents. |
-| `write_file` | Create or overwrite files. |
-| `edit_file` | Replace specific text in existing files. |
-| `bash` | Execute terminal commands using Windows CMD. |
-| `glob` | Find files matching a glob pattern. |
-| `list_dir` | List directory contents. |
-| `search_code` | Search project files for matching code or text. |
-| `git` | Inspect repository status, diffs, logs, and branches. |
+| Tool          | Purpose                                               |
+| ------------- | ----------------------------------------------------- |
+| `read_file`   | Read file contents.                                   |
+| `write_file`  | Create or overwrite files.                            |
+| `edit_file`   | Replace specific text in existing files.              |
+| `bash`        | Execute terminal commands using Windows CMD.          |
+| `glob`        | Find files matching a glob pattern.                   |
+| `list_dir`    | List directory contents.                              |
+| `search_code` | Search project files for matching code or text.       |
+| `git`         | Inspect repository status, diffs, logs, and branches. |
 
 ## Tool access by mode
 
 ANAS CLI provides three interaction modes.
 
-| Tool | Ask | Agent | Plan |
-| --- | --- | --- | --- |
-| `read_file` | Yes | Yes | No |
-| `write_file` | No | Yes | No |
-| `edit_file` | No | Yes | No |
-| `bash` | No | Yes | No |
-| `glob` | Yes | Yes | No |
-| `list_dir` | Yes | Yes | No |
-| `search_code` | Yes | Yes | No |
-| `git` | No | Yes | No |
+| Tool          | Ask | Agent | Plan |
+| ------------- | --- | ----- | ---- |
+| `read_file`   | Yes | Yes   | No   |
+| `write_file`  | No  | Yes   | No   |
+| `edit_file`   | No  | Yes   | No   |
+| `bash`        | No  | Yes   | No   |
+| `glob`        | Yes | Yes   | No   |
+| `list_dir`    | Yes | Yes   | No   |
+| `search_code` | Yes | Yes   | No   |
+| `git`         | No  | Yes   | No   |
 
 ### Ask mode
 
@@ -84,11 +84,11 @@ See [Ask, Agent, and Plan Modes](/docs/guides/modes).
 
 ANAS CLI requests confirmation before executing operations that can modify files or execute terminal commands.
 
-| Tool | Permission requirement |
-| --- | --- |
-| `bash` | Confirm before executing a command. |
-| `write_file` | Confirm before creating or overwriting a file. |
-| `edit_file` | Confirm before modifying existing file contents. |
+| Tool         | Permission requirement                           |
+| ------------ | ------------------------------------------------ |
+| `bash`       | Confirm before executing a command.              |
+| `write_file` | Confirm before creating or overwriting a file.   |
+| `edit_file`  | Confirm before modifying existing file contents. |
 
 Review each operation before approving it.
 

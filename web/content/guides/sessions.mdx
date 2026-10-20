@@ -131,16 +131,16 @@ A failed synchronization should not be treated as a successfully saved cloud con
 
 ## Local sessions vs. cloud sessions
 
-| Feature | Local sessions | Cloud sessions |
-| --- | --- | --- |
-| Available during current process | Yes | Yes, after loading |
-| Listed by `/history` | Yes | Not directly |
-| Available through `/resume` | Yes | Yes, when authenticated |
-| Survives closing the CLI | No | Yes, if successfully saved |
-| Requires ANAS Cloud login | No | Yes |
-| Requires internet access | No | Yes |
-| Stored in persistent local database | No | No, stored in cloud backend |
-| Supports continued conversations | Yes | Yes, after restoration |
+| Feature                             | Local sessions | Cloud sessions              |
+| ----------------------------------- | -------------- | --------------------------- |
+| Available during current process    | Yes            | Yes, after loading          |
+| Listed by `/history`                | Yes            | Not directly                |
+| Available through `/resume`         | Yes            | Yes, when authenticated     |
+| Survives closing the CLI            | No             | Yes, if successfully saved  |
+| Requires ANAS Cloud login           | No             | Yes                         |
+| Requires internet access            | No             | Yes                         |
+| Stored in persistent local database | No             | No, stored in cloud backend |
+| Supports continued conversations    | Yes            | Yes, after restoration      |
 
 ## Authentication and access
 
@@ -164,12 +164,12 @@ Agent memory stores information intended to remain useful beyond a single conver
 
 These systems serve different purposes.
 
-| Sessions | Agent memory |
-| --- | --- |
-| Store conversation history | Store reusable context |
-| Track individual conversations | Can be shared across conversations |
-| Support resuming chats | Supports retaining relevant information |
-| May synchronize to ANAS Cloud | Has separate cloud integration |
+| Sessions                       | Agent memory                            |
+| ------------------------------ | --------------------------------------- |
+| Store conversation history     | Store reusable context                  |
+| Track individual conversations | Can be shared across conversations      |
+| Support resuming chats         | Supports retaining relevant information |
+| May synchronize to ANAS Cloud  | Has separate cloud integration          |
 
 ANAS CLI includes a cloud memory endpoint.
 
@@ -179,13 +179,13 @@ See [Memory](/docs/guides/memory).
 
 ## Session commands
 
-| Command | Description |
-| --- | --- |
-| `/new` | Create and activate a new session. |
-| `/history` | List locally available sessions. |
-| `/resume` | Resume an eligible local or cloud session. |
-| `/exit` | Exit the interactive chat. |
-| `/help` | Display available slash commands. |
+| Command    | Description                                |
+| ---------- | ------------------------------------------ |
+| `/new`     | Create and activate a new session.         |
+| `/history` | List locally available sessions.           |
+| `/resume`  | Resume an eligible local or cloud session. |
+| `/exit`    | Exit the interactive chat.                 |
+| `/help`    | Display available slash commands.          |
 
 ## Important limitations
 

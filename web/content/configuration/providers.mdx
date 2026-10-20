@@ -11,13 +11,13 @@ You can configure provider credentials locally or use supported ANAS Cloud funct
 
 ## Supported providers
 
-| Provider | Environment variable |
-| --- | --- |
-| OpenAI | `OPENAI_API_KEY` |
-| Claude | `ANTHROPIC_API_KEY` |
+| Provider   | Environment variable |
+| ---------- | -------------------- |
+| OpenAI     | `OPENAI_API_KEY`     |
+| Claude     | `ANTHROPIC_API_KEY`  |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini | `GEMINI_API_KEY` |
-| Groq | `GROQ_API_KEY` |
+| Gemini     | `GEMINI_API_KEY`     |
+| Groq       | `GROQ_API_KEY`       |
 
 OpenAI is the default provider.
 
@@ -141,11 +141,11 @@ ANAS Cloud supports storing provider credentials through authenticated backend e
 
 Available operations include:
 
-| Operation | Description |
-| --- | --- |
-| Check | Determine whether a provider key is saved. |
-| Save | Save or replace a provider key. |
-| Delete | Delete a saved provider key. |
+| Operation | Description                                |
+| --------- | ------------------------------------------ |
+| Check     | Determine whether a provider key is saved. |
+| Save      | Save or replace a provider key.            |
+| Delete    | Delete a saved provider key.               |
 
 ### Encryption
 
@@ -159,12 +159,12 @@ The cloud chat endpoint does not return the saved provider key to the CLI.
 
 ### Local vs cloud credentials
 
-| Local configuration | ANAS Cloud |
-| --- | --- |
-| Uses environment variables | Uses authenticated cloud storage |
-| Key is configured on your machine | Key is encrypted in the cloud database |
+| Local configuration                                                | ANAS Cloud                                      |
+| ------------------------------------------------------------------ | ----------------------------------------------- |
+| Uses environment variables                                         | Uses authenticated cloud storage                |
+| Key is configured on your machine                                  | Key is encrypted in the cloud database          |
 | Local provider integration sends requests using the configured key | Cloud backend sends supported provider requests |
-| No cloud login required for local configuration | Cloud authentication required |
+| No cloud login required for local configuration                    | Cloud authentication required                   |
 
 Cloud storage is optional for users who prefer local provider configuration.
 

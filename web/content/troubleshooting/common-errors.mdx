@@ -35,13 +35,13 @@ npm run dev -- doctor
 
 Check your `.env` file in the project root.
 
-| Provider | Environment variable |
-| --- | --- |
-| OpenAI | `OPENAI_API_KEY` |
-| Claude | `ANTHROPIC_API_KEY` |
+| Provider   | Environment variable |
+| ---------- | -------------------- |
+| OpenAI     | `OPENAI_API_KEY`     |
+| Claude     | `ANTHROPIC_API_KEY`  |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Gemini | `GEMINI_API_KEY` |
-| Groq | `GROQ_API_KEY` |
+| Gemini     | `GEMINI_API_KEY`     |
+| Groq       | `GROQ_API_KEY`       |
 
 For example:
 
@@ -325,11 +325,11 @@ Check:
 
 ### Mode restrictions
 
-| Mode | Tool access |
-| --- | --- |
-| Ask | Read-only inspection tools |
+| Mode  | Tool access                                        |
+| ----- | -------------------------------------------------- |
+| Ask   | Read-only inspection tools                         |
 | Agent | All eight registered tools, subject to permissions |
-| Plan | No registered tools |
+| Plan  | No registered tools                                |
 
 Agent mode requires confirmation for terminal commands and file-writing or editing operations.
 

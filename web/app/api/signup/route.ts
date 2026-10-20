@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { hashPassword, newOtp, normalizeEmail, otpHash } from "@/lib/auth";
-import { sendPasswordResetOtp } from "@/lib/mail";
+import { sendSignupVerificationOtp } from "@/lib/mail";
 import { badRequest, json, signupSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     createdAt: new Date(),
   });
 
-  await sendPasswordResetOtp(email, otp);
+  await sendSignupVerificationOtp(email, otp);
 
   return json({
     message: "Verification code sent to your email.",

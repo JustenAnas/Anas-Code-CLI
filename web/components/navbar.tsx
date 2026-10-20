@@ -56,9 +56,7 @@ export default function Navbar() {
         hovered ? "bg-white text-black" : "bg-black text-white"
       }`}
     >
-      <div className="text-2xl font-bold tracking-tight">
-        ANAS CLI
-      </div>
+      <div className="text-2xl font-bold tracking-tight">ANAS CLI</div>
 
       <div className="flex items-center gap-8 text-base font-semibold">
         <a

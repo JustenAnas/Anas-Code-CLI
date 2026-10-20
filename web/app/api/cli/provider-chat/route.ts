@@ -361,7 +361,12 @@ export async function POST(request: Request) {
         : undefined;
 
     if (body.stream === true) {
-      return streamResponse(client, provider, messages as ChatMessage[], toolList);
+      return streamResponse(
+        client,
+        provider,
+        messages as ChatMessage[],
+        toolList,
+      );
     }
 
     const completion = await client.chat.completions.create({
@@ -376,7 +381,9 @@ export async function POST(request: Request) {
     const toolCalls =
       message?.tool_calls
         ?.filter(
-          (call): call is Extract<
+          (
+            call,
+          ): call is Extract<
             NonNullable<typeof message.tool_calls>[number],
             { type: "function" }
           > => call.type === "function",
