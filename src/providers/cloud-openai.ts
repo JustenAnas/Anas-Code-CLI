@@ -193,7 +193,18 @@ function parseToolCalls(value: unknown): ToolCall[] {
 }
 
 export class CloudOpenAIProvider implements BaseProvider {
-  readonly name = "openai";
+  readonly name: string;
+
+  constructor(
+    private readonly cloudProvider:
+      | "openai"
+      | "gemini"
+      | "openrouter"
+      | "groq" = "openai",
+    private readonly useOwnKey = false,
+  ) {
+    this.name = cloudProvider;
+  }
 
   private get apiUrl(): string {
     return (
@@ -229,7 +240,8 @@ export class CloudOpenAIProvider implements BaseProvider {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          provider: "openai",
+                   provider: this.cloudProvider,
+          useOwnKey: this.useOwnKey,
           messages: toApiMessages(messages, systemPrompt),
           tools: TOOLS,
           stream,

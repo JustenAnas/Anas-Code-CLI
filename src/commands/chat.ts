@@ -1,4 +1,4 @@
-
+import { config } from "../config/user-config.js";
 import { input, confirm, select } from "@inquirer/prompts";
 import { fmt } from "../ui/format.js";
 import ora from "ora";
@@ -68,11 +68,19 @@ export async function startChat(
   let {
     mode = "agent",
     verbose = false,
-    provider: providerName = "openrouter",
+    provider: providerName = config.get("provider"),
     model,
   } = options;
 
-  const provider = createProvider(providerName, model);
+ let provider: ReturnType<typeof createProvider>;
+try {
+  provider = createProvider(providerName, model);
+} catch (error) {
+  console.error(
+    fmt.error(error instanceof Error ? error.message : String(error)),
+  );
+  return;
+}
   const context = await buildProjectContext();
 
   const sessionStore = new SessionStore();
@@ -352,6 +360,11 @@ export async function startChat(
           process.stdout.write(chunk);
         },
         (status) => {
+                    if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
+            spinner?.stop();
+            console.error(fmt.error(status));
+            return;
+          }
           if (status.startsWith("[Using tool: ")) {
             const tool = status
               .replace("[Using tool: ", "")
@@ -431,6 +444,10 @@ ${plan.steps
               process.stdout.write(chunk);
             },
             (status) => {
+                            if (/^\[(Error|API Error|Insufficient|Guardrail)/.test(status)) {
+                console.error(fmt.error(status));
+                return;
+              }
               if (verbose) {
                 console.log(`\n[DEBUG] ${status}`);
               }

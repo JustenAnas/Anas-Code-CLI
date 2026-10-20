@@ -1,4 +1,3 @@
-
 import OpenAI from "openai";
 import { currentCliUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -9,15 +8,43 @@ export const runtime = "nodejs";
 
 const MAX_BODY_BYTES = 1_000_000;
 
+const PROVIDERS = {
+  openai: {
+    model: "gpt-4o",
+    label: "OpenAI",
+    baseURL: undefined as string | undefined,
+    envKey: undefined as string | undefined,
+  },
+  gemini: {
+    model: process.env.GEMINI_FREE_MODEL ?? "gemini-2.5-flash",
+    label: "Gemini",
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    envKey: "GEMINI_API_KEY",
+  },
+  openrouter: {
+    model:
+      process.env.OPENROUTER_FREE_MODEL ??
+      "meta-llama/llama-3.3-70b-instruct:free",
+    label: "OpenRouter",
+    baseURL: "https://openrouter.ai/api/v1",
+    envKey: "OPENROUTER_API_KEY",
+  },
+  groq: {
+    model: process.env.GROQ_FREE_MODEL ?? "llama-3.3-70b-versatile",
+    label: "Groq",
+    baseURL: "https://api.groq.com/openai/v1",
+    envKey: "GROQ_API_KEY",
+  },
+};
+
+type CloudProvider = keyof typeof PROVIDERS;
 type ToolDefinition = OpenAI.Chat.Completions.ChatCompletionTool;
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 function respond(body: Record<string, unknown>, status = 200) {
   return Response.json(body, {
     status,
-    headers: {
-      "Cache-Control": "no-store",
-    },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
@@ -26,23 +53,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isValidMessage(value: unknown): boolean {
-  if (!isRecord(value) || typeof value.role !== "string") {
-    return false;
-  }
+  if (!isRecord(value) || typeof value.role !== "string") return false;
 
   if (value.role === "system" || value.role === "user") {
-    return (
-      typeof value.content === "string" &&
-      value.content.length <= 50_000
-    );
+    return typeof value.content === "string" && value.content.length <= 50_000;
   }
 
   if (value.role === "assistant") {
     if (
       value.content !== null &&
       value.content !== undefined &&
-      (typeof value.content !== "string" ||
-        value.content.length > 50_000)
+      (typeof value.content !== "string" || value.content.length > 50_000)
     ) {
       return false;
     }
@@ -85,12 +106,8 @@ function isValidMessage(value: unknown): boolean {
 }
 
 function isValidTool(value: unknown): boolean {
-  if (!isRecord(value) || value.type !== "function") {
-    return false;
-  }
-
+  if (!isRecord(value) || value.type !== "function") return false;
   const fn = value.function;
-
   return (
     isRecord(fn) &&
     typeof fn.name === "string" &&
@@ -102,32 +119,43 @@ function isValidTool(value: unknown): boolean {
   );
 }
 
+function tokenLimit(provider: CloudProvider) {
+  return provider === "openai"
+    ? { max_completion_tokens: 1024 }
+    : { max_tokens: 4096 };
+}
 
-async function streamOpenAIResponse(
+function safeParse(text: string): Record<string, unknown> {
+  try {
+    return JSON.parse(text || "{}");
+  } catch {
+    return {};
+  }
+}
+
+async function streamResponse(
   client: OpenAI,
-  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-  tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
+  provider: CloudProvider,
+  messages: ChatMessage[],
+  tools?: ToolDefinition[],
 ): Promise<Response> {
+  const { model, label } = PROVIDERS[provider];
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: string, data: unknown) => {
         controller.enqueue(
-          encoder.encode(
-            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
-          ),
+          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
         );
       };
 
       try {
         const completion = await client.chat.completions.create({
-          model: "gpt-4o",
+          model,
           messages,
-          ...(tools?.length
-            ? { tools, tool_choice: "auto" as const }
-            : {}),
-          max_completion_tokens: 1024,
+          ...(tools?.length ? { tools, tool_choice: "auto" as const } : {}),
+          ...tokenLimit(provider),
           stream: true,
           stream_options: { include_usage: true },
         });
@@ -145,25 +173,24 @@ async function streamOpenAIResponse(
           }
 
           for (const call of delta?.tool_calls ?? []) {
-            const existing = toolCallsByIndex.get(call.index) ?? {
+            const idx =
+              typeof call.index === "number"
+                ? call.index
+                : toolCallsByIndex.size;
+
+            const existing = toolCallsByIndex.get(idx) ?? {
               id: "",
               name: "",
               arguments: "",
             };
 
-            if (call.id) {
-              existing.id = call.id;
-            }
-
-            if (call.function?.name) {
-              existing.name += call.function.name;
-            }
-
+            if (call.id) existing.id = call.id;
+            if (call.function?.name) existing.name += call.function.name;
             if (call.function?.arguments) {
               existing.arguments += call.function.arguments;
             }
 
-            toolCallsByIndex.set(call.index, existing);
+            toolCallsByIndex.set(idx, existing);
           }
 
           if (chunk.usage) {
@@ -177,10 +204,10 @@ async function streamOpenAIResponse(
         if (toolCallsByIndex.size > 0) {
           const toolCalls = [...toolCallsByIndex.entries()]
             .sort(([a], [b]) => a - b)
-            .map(([, call]) => ({
-              id: call.id,
+            .map(([i, call]) => ({
+              id: call.id || `call_${i}`,
               name: call.name,
-              input: JSON.parse(call.arguments || "{}"),
+              input: safeParse(call.arguments),
             }));
 
           send("tool_calls", { toolCalls });
@@ -197,11 +224,11 @@ async function streamOpenAIResponse(
 
         if (error instanceof OpenAI.APIError) {
           if (error.status === 401) {
-            message = "Invalid saved OpenAI API key";
+            message = `Invalid ${label} API key`;
           } else if (error.status === 429) {
-            message = "OpenAI rate limit or quota exceeded";
+            message = `${label} rate limit or quota exceeded`;
           } else {
-            message = "OpenAI provider request failed";
+            message = `${label} provider request failed`;
           }
         }
 
@@ -222,7 +249,6 @@ async function streamOpenAIResponse(
   });
 }
 
-
 export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("authorization");
@@ -240,24 +266,20 @@ export async function POST(request: Request) {
 
     const rateLimit = await checkCliRateLimit(user._id.toString());
 
-if (!rateLimit.allowed) {
-  return Response.json(
-    {
-      error: "Rate limit exceeded. Please try again shortly.",
-    },
-    {
-      status: 429,
-      headers: {
-        "Cache-Control": "no-store",
-        "Retry-After": String(rateLimit.retryAfter),
-      },
-    },
-  );
-}
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: "Rate limit exceeded. Please try again shortly." },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(rateLimit.retryAfter),
+          },
+        },
+      );
+    }
 
-    const contentLength = Number(
-      request.headers.get("content-length") ?? 0,
-    );
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
 
     if (contentLength > MAX_BODY_BYTES) {
       return respond({ error: "Request too large" }, 413);
@@ -285,7 +307,8 @@ if (!rateLimit.allowed) {
     const tools = body.tools;
 
     if (
-      body.provider !== "openai" ||
+      typeof body.provider !== "string" ||
+      !Object.hasOwn(PROVIDERS, body.provider) ||
       !Array.isArray(messages) ||
       messages.length === 0 ||
       messages.length > 100 ||
@@ -298,50 +321,54 @@ if (!rateLimit.allowed) {
       return respond({ error: "Invalid chat request" }, 400);
     }
 
-    const saved = await prisma.userProviderKey.findUnique({
-      where: {
-        userId_provider: {
-          userId: user._id.toString(),
-          provider: "openai",
-        },
-      },
-      select: {
-        encryptedKey: true,
-      },
-    });
+    const provider = body.provider as CloudProvider;
+    const cfg = PROVIDERS[provider];
 
-    if (!saved) {
-      return respond(
-        { error: "No saved OpenAI API key found" },
-        404,
-      );
+    let client: OpenAI;
+
+    if (provider === "openai" || body.useOwnKey === true) {
+      const saved = await prisma.userProviderKey.findUnique({
+        where: {
+          userId_provider: { userId: user._id.toString(), provider },
+        },
+        select: { encryptedKey: true },
+      });
+
+      if (!saved) {
+        return respond({ error: `No saved ${cfg.label} API key found` }, 404);
+      }
+
+      client = new OpenAI({
+        apiKey: decryptProviderKey(saved.encryptedKey),
+        ...(cfg.baseURL ? { baseURL: cfg.baseURL } : {}),
+      });
+    } else {
+      const key = cfg.envKey ? process.env[cfg.envKey] : undefined;
+
+      if (!key) {
+        return respond(
+          { error: `ANAS Free for ${cfg.label} is not configured` },
+          503,
+        );
+      }
+
+      client = new OpenAI({ apiKey: key, baseURL: cfg.baseURL });
     }
 
-    const apiKey = decryptProviderKey(saved.encryptedKey);
-    const client = new OpenAI({ apiKey });
+    const toolList =
+      Array.isArray(tools) && tools.length > 0
+        ? (tools as ToolDefinition[])
+        : undefined;
 
-    
-if (body.stream === true) {
-  return streamOpenAIResponse(
-    client,
-    messages as ChatMessage[],
-    Array.isArray(tools) && tools.length > 0
-      ? (tools as ToolDefinition[])
-      : undefined,
-  );
-}
-
+    if (body.stream === true) {
+      return streamResponse(client, provider, messages as ChatMessage[], toolList);
+    }
 
     const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: cfg.model,
       messages: messages as ChatMessage[],
-      ...(Array.isArray(tools) && tools.length > 0
-        ? {
-            tools: tools as ToolDefinition[],
-            tool_choice: "auto" as const,
-          }
-        : {}),
-      max_completion_tokens: 1024,
+      ...(toolList ? { tools: toolList, tool_choice: "auto" as const } : {}),
+      ...tokenLimit(provider),
     });
 
     const message = completion.choices[0]?.message;
@@ -354,16 +381,10 @@ if (body.stream === true) {
             { type: "function" }
           > => call.type === "function",
         )
-        .map((call) => ({
-          id: call.id,
+        .map((call, i) => ({
+          id: call.id || `call_${i}`,
           name: call.function.name,
-          input: (() => {
-            try {
-              return JSON.parse(call.function.arguments);
-            } catch {
-              return {};
-            }
-          })(),
+          input: safeParse(call.function.arguments),
         })) ?? [];
 
     return respond({
@@ -375,23 +396,12 @@ if (body.stream === true) {
   } catch (error) {
     if (error instanceof OpenAI.APIError) {
       if (error.status === 401) {
-        return respond(
-          { error: "Invalid saved OpenAI API key" },
-          401,
-        );
+        return respond({ error: "Invalid provider API key" }, 401);
       }
-
       if (error.status === 429) {
-        return respond(
-          { error: "OpenAI rate limit or quota exceeded" },
-          429,
-        );
+        return respond({ error: "Provider rate limit or quota exceeded" }, 429);
       }
-
-      return respond(
-        { error: "OpenAI provider request failed" },
-        502,
-      );
+      return respond({ error: "Provider request failed" }, 502);
     }
 
     console.error(
@@ -399,9 +409,6 @@ if (body.stream === true) {
       error instanceof Error ? error.message : error,
     );
 
-    return respond(
-      { error: "Provider chat request failed" },
-      500,
-    );
+    return respond({ error: "Provider chat request failed" }, 500);
   }
 }

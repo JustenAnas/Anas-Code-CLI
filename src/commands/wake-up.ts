@@ -182,44 +182,38 @@ async function requireCloudLogin(): Promise<void> {
 
 async function configureProviderAccess(
   provider: ProviderName,
-): Promise<void> {
-  // Local API keys still work.
-  if (getApiKey(provider)) {
-    console.log(chalk.green(`✓ ${provider} local API key detected`));
-    return;
+): Promise<AccessMethod> {
+  // Claude: own key, kept for this session only.
+  if (provider === "claude") {
+    await ensureApiKey(provider);
+    return "own-key";
   }
 
-  // OpenAI can use a key stored in ANAS Cloud.
-  if (provider === "openai") {
-    const hasCloudKey = await cloudClient.hasProviderKey("openai");
-
-    if (hasCloudKey) {
-      console.log(chalk.green("✓ OpenAI cloud API key detected"));
-      return;
-    }
-
-    console.log(
-      chalk.yellow("No OpenAI API key found in ANAS Cloud."),
-    );
-
-    const key = await password({
-      message: "Enter your OpenAI API key:",
-      mask: "*",
-      validate: (value) =>
-        value.trim().length > 0 || "API key cannot be empty.",
-    });
-
-    await cloudClient.saveProviderKey("openai", key.trim());
-
-    console.log(chalk.green("✓ OpenAI API key saved to ANAS Cloud"));
-    return;
+  // OpenAI: own key only. Local key wins, otherwise use the one in ANAS Cloud.
+  if (provider === "openai" && getApiKey("openai")) {
+    console.log(chalk.green("✓ openai local API key detected"));
+    return "own-key";
   }
 
-  const method = await selectAccessMethod(provider);
+  const method =
+    provider === "openai" ? "own-key" : await selectAccessMethod(provider);
 
   if (method === "own-key") {
-    await ensureApiKey(provider);
+    if (await cloudClient.hasProviderKey(provider)) {
+      console.log(chalk.green(`✓ ${provider} key found in ANAS Cloud`));
+    } else {
+      const key = await password({
+        message: `Enter your ${provider} API key:`,
+        mask: "*",
+        validate: (v) => v.trim().length > 0 || "API key cannot be empty.",
+      });
+
+      await cloudClient.saveProviderKey(provider, key.trim());
+      console.log(chalk.green(`✓ ${provider} key saved to ANAS Cloud`));
+    }
   }
+
+  return method;
 }
 
 async function selectOpenRouterModel(): Promise<string> {
@@ -272,7 +266,8 @@ export async function wakeUp(
 
   console.log();
 
-  let provider: ProviderName;
+    let provider: ProviderName;
+  let method: AccessMethod;
 
   try {
     provider = await selectProvider();
@@ -280,7 +275,8 @@ export async function wakeUp(
     // Authenticate before checking cloud API keys.
     await requireCloudLogin();
 
-    await configureProviderAccess(provider);
+    method = await configureProviderAccess(provider);
+    config.set("accessMethod", method);
   } catch (error) {
     console.error(
       fmt.error(
@@ -293,7 +289,8 @@ export async function wakeUp(
 
   let model: string | undefined;
 
-  if (provider === "openrouter") {
+  // Model picker only for own-key. ANAS Free uses the server's model.
+  if (provider === "openrouter" && method === "own-key") {
     try {
       model = await selectOpenRouterModel();
     } catch (error) {

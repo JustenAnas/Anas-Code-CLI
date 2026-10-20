@@ -429,7 +429,14 @@ export async function runAgentLoop(
       continue;
     }
 
-    if (!toolCall) {
+        if (!toolCall) {
+      if (!response.content?.trim()) {
+        onStatus?.(
+          "[Error] The provider returned an empty response. Check your provider, API key, or ANAS Cloud login.",
+        );
+        break;
+      }
+
       history.push({
         role: "assistant",
         content: response.content,

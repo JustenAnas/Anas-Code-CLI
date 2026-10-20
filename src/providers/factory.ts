@@ -1,11 +1,9 @@
-
 import { ClaudeProvider } from "./claude.js";
 import { OpenAIProvider } from "./openai.js";
-import { OpenRouterProvider } from "./openrouter.js";
-import { GeminiProvider } from "./gemini.js";
-import { GroqProvider } from "./groq.js";
 import { CloudOpenAIProvider } from "./cloud-openai.js";
 import type { BaseProvider } from "./base.js";
+import { getApiKey } from "../config/env.js";
+import { config } from "../config/user-config.js";
 
 export type ProviderName =
   | "claude"
@@ -19,34 +17,31 @@ export function createProvider(
   model?: string,
 ): BaseProvider {
   switch (name) {
-    case "claude":
-      return new ClaudeProvider(
-        process.env.ANTHROPIC_API_KEY ?? "",
-      );
+    case "claude": {
+      const key = getApiKey("claude");
 
-    case "openai":
-      // Existing local API keys continue to work.
-      if (process.env.OPENAI_API_KEY) {
-        return new OpenAIProvider(process.env.OPENAI_API_KEY);
+      if (!key) {
+        throw new Error(
+          'Anthropic API key not set. Run "anas wakeup" to configure it.',
+        );
       }
 
-      // Otherwise, use the API key stored in ANAS Cloud.
-      return new CloudOpenAIProvider();
+      return new ClaudeProvider(key);
+    }
 
-    case "openrouter":
-      return new OpenRouterProvider(
-        process.env.OPENROUTER_API_KEY ?? "",
-        model,
-      );
+    case "openai": {
+      const key = getApiKey("openai");
+      return key
+        ? new OpenAIProvider(key)
+        : new CloudOpenAIProvider("openai", true);
+    }
 
     case "gemini":
-      return new GeminiProvider(
-        process.env.GEMINI_API_KEY ?? "",
-      );
-
+    case "openrouter":
     case "groq":
-      return new GroqProvider(
-        process.env.GROQ_API_KEY ?? "",
+      return new CloudOpenAIProvider(
+        name,
+        config.get("accessMethod") === "own-key",
       );
   }
 }

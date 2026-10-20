@@ -5,6 +5,7 @@ import type { CliMode } from "../agent/modes.js";
 type UserConfig = {
   provider: ProviderName;
   mode: CliMode;
+  accessMethod?: "free" | "own-key";
   cloudToken?: string;
   cloudEmail?: string;
 };
