@@ -1,5 +1,5 @@
+
 import { randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -22,19 +22,16 @@ export async function GET(request: Request) {
     );
   }
 
-  const redirectUri = "http://localhost:3000/api/auth/google/callback";
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: "Google OAuth redirect URI is not configured." },
+      { status: 500 },
+    );
+  }
 
   const state = `${mode}:${randomBytes(32).toString("hex")}`;
-
-  const cookieStore = await cookies();
-
-  cookieStore.set("google_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 600,
-  });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -46,7 +43,17 @@ export async function GET(request: Request) {
     state,
   });
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
   );
+
+  response.cookies.set("google_oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  });
+
+  return response;
 }

@@ -1,5 +1,5 @@
+
 import { randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -22,19 +22,16 @@ export async function GET(request: Request) {
     );
   }
 
-  const redirectUri = "http://localhost:3000/api/auth/github/callback";
+  const redirectUri = process.env.GITHUB_REDIRECT_URI;
+
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: "GitHub OAuth redirect URI is not configured." },
+      { status: 500 },
+    );
+  }
 
   const state = `${mode}:${randomBytes(32).toString("hex")}`;
-
-  const cookieStore = await cookies();
-
-  cookieStore.set("github_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 600,
-  });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -43,7 +40,17 @@ export async function GET(request: Request) {
     state,
   });
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `https://github.com/login/oauth/authorize?${params.toString()}`,
   );
+
+  response.cookies.set("github_oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  });
+
+  return response;
 }
