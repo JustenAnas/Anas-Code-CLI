@@ -142,8 +142,9 @@ async function streamResponse(
   provider: CloudProvider,
   messages: ChatMessage[],
   tools?: ToolDefinition[],
+  model: string = PROVIDERS[provider].model,
 ): Promise<Response> {
-  const { model, label } = PROVIDERS[provider];
+   const { label } = PROVIDERS[provider];
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -329,6 +330,21 @@ export async function POST(request: Request) {
 
     const provider = body.provider as CloudProvider;
     const cfg = PROVIDERS[provider];
+    if (
+  body.model !== undefined &&
+  (provider !== "openrouter" ||
+    typeof body.model !== "string" ||
+    body.model.length < 1 ||
+    body.model.length > 200 ||
+    !/^[a-zA-Z0-9._:/-]+$/.test(body.model))
+) {
+  return respond({ error: "Invalid model selection" }, 400);
+}
+
+const selectedModel =
+  provider === "openrouter" && typeof body.model === "string"
+    ? body.model
+    : cfg.model;
 
     let client: OpenAI;
 
@@ -372,11 +388,12 @@ export async function POST(request: Request) {
         provider,
         messages as ChatMessage[],
         toolList,
+        selectedModel,
       );
     }
 
     const completion = await client.chat.completions.create({
-      model: cfg.model,
+      model: selectedModel,
       messages: messages as ChatMessage[],
       ...(toolList ? { tools: toolList, tool_choice: "auto" as const } : {}),
       ...tokenLimit(provider),

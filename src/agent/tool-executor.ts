@@ -92,13 +92,13 @@ export async function executeTool(
       break;
 
     case "edit_file":
-      result = await editFileTool(
-        input.path,
-        input.oldStr,
-        input.newStr,
-        userPrompt,
-      );
-      break;
+  result = await editFileTool(
+    input.path,
+    input.old_string ?? input.oldStr,
+    input.new_string ?? input.newStr,
+    userPrompt,
+  );
+  break;
 
     case "git":
       result = await gitTool(

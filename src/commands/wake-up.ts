@@ -1,3 +1,4 @@
+
 import { select, password } from "@inquirer/prompts";
 import boxen from "boxen";
 import chalk from "chalk";
@@ -29,7 +30,11 @@ const PROVIDERS: ProviderName[] = [
   "groq",
 ];
 
-const ANAS_FREE_PROVIDERS: ProviderName[] = ["gemini", "openrouter", "groq"];
+const ANAS_FREE_PROVIDERS: ProviderName[] = [
+  "gemini",
+  "openrouter",
+  "groq",
+];
 
 type WakeUpOptions = {
   verbose?: boolean;
@@ -42,7 +47,9 @@ function supportsAnasFree(provider: ProviderName): boolean {
 }
 
 function formatPrice(price: number): string {
-  return price === 0 ? "Free" : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
+  return price === 0
+    ? "Free"
+    : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
 }
 
 async function runDoctor(): Promise<void> {
@@ -58,7 +65,11 @@ function printModePanels(): void {
       {
         padding: 1,
         borderColor:
-          mode === "agent" ? "green" : mode === "ask" ? "blue" : "yellow",
+          mode === "agent"
+            ? "green"
+            : mode === "ask"
+              ? "blue"
+              : "yellow",
       },
     );
 
@@ -129,7 +140,8 @@ async function ensureApiKey(provider: ProviderName): Promise<void> {
         const claude = new ClaudeProvider(key);
         await claude.verifyApiKey();
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message =
+          error instanceof Error ? error.message : String(error);
 
         console.error(fmt.error(message));
 
@@ -155,55 +167,72 @@ async function requireCloudLogin(): Promise<void> {
   }
 
   console.log();
-  console.log(chalk.yellow("ANAS account login is required to continue."));
+  console.log(
+    chalk.yellow("ANAS account login is required to continue."),
+  );
 
   const loggedIn = await cloudLogin();
 
   if (!loggedIn) {
-    throw new Error("ANAS login failed. Please log in before starting chat.");
+    throw new Error(
+      "ANAS login failed. Please log in before starting chat.",
+    );
   }
+
+  console.log(chalk.green("✓ ANAS account login successful"));
 }
 
 async function configureProviderAccess(
   provider: ProviderName,
-): Promise<AccessMethod> {
-  // Claude: own key, kept for this session only.
+  method: AccessMethod,
+): Promise<void> {
+  // Claude continues to use its existing local-key flow.
   if (provider === "claude") {
     await ensureApiKey(provider);
-    return "own-key";
+    return;
   }
 
-  // OpenAI: own key only. Local key wins, otherwise use the one in ANAS Cloud.
+  // OpenAI: prefer a local key if one is already configured.
   if (provider === "openai" && getApiKey("openai")) {
     console.log(chalk.green("✓ openai local API key detected"));
-    return "own-key";
+    return;
   }
 
-  const method =
-    provider === "openai" ? "own-key" : await selectAccessMethod(provider);
-
-  if (method === "own-key") {
-    if (await cloudClient.hasProviderKey(provider)) {
-      console.log(chalk.green(`✓ ${provider} key found in ANAS Cloud`));
-    } else {
-      const key = await password({
-        message: `Enter your ${provider} API key:`,
-        mask: "*",
-        validate: (v) => v.trim().length > 0 || "API key cannot be empty.",
-      });
-
-      await cloudClient.saveProviderKey(provider, key.trim());
-      console.log(chalk.green(`✓ ${provider} key saved to ANAS Cloud`));
-    }
+  if (method !== "own-key") {
+    return;
   }
 
-  return method;
+  // Cloud key operations require an authenticated ANAS account.
+  await requireCloudLogin();
+
+  if (await cloudClient.hasProviderKey(provider)) {
+    console.log(
+      chalk.green(`✓ ${provider} key found in ANAS Cloud`),
+    );
+    return;
+  }
+
+  const key = await password({
+    message: `Enter your ${provider} API key:`,
+    mask: "*",
+    validate: (value) =>
+      value.trim().length > 0 || "API key cannot be empty.",
+  });
+
+  await cloudClient.saveProviderKey(provider, key.trim());
+
+  console.log(
+    chalk.green(`✓ ${provider} key saved to ANAS Cloud`),
+  );
 }
 
 async function selectOpenRouterModel(): Promise<string> {
-  console.log(fmt.dim("Fetching available OpenRouter models..."));
+  console.log(
+    fmt.dim("Fetching available OpenRouter models..."),
+  );
 
-  const models: OpenRouterModel[] = await fetchOpenRouterModels();
+  const models: OpenRouterModel[] =
+    await fetchOpenRouterModels();
 
   if (models.length === 0) {
     throw new Error(
@@ -225,7 +254,9 @@ async function selectOpenRouterModel(): Promise<string> {
   });
 }
 
-export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
+export async function wakeUp(
+  options: WakeUpOptions = {},
+): Promise<void> {
   const { verbose = false } = options;
 
   printBanner();
@@ -235,7 +266,11 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
     await runDoctor();
   } catch (error) {
     console.error(
-      fmt.error(error instanceof Error ? error.message : String(error)),
+      fmt.error(
+        error instanceof Error
+          ? error.message
+          : String(error),
+      ),
     );
     process.exitCode = 1;
     return;
@@ -247,16 +282,24 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
   let method: AccessMethod;
 
   try {
+    // 1. Choose provider.
     provider = await selectProvider();
 
-    // Authenticate before checking cloud API keys.
-    await requireCloudLogin();
+    // 2. Choose ANAS Free or own API key.
+    method = await selectAccessMethod(provider);
 
-    method = await configureProviderAccess(provider);
     config.set("accessMethod", method);
+
+    // 3. Configure provider access.
+    // Own-key cloud operations may require early login.
+    await configureProviderAccess(provider, method);
   } catch (error) {
     console.error(
-      fmt.error(error instanceof Error ? error.message : String(error)),
+      fmt.error(
+        error instanceof Error
+          ? error.message
+          : String(error),
+      ),
     );
     process.exitCode = 1;
     return;
@@ -264,22 +307,27 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
 
   let model: string | undefined;
 
-  // Model picker only for own-key. ANAS Free uses the server's model.
-  if (provider === "openrouter" && method === "own-key") {
+  // Model picker only for own-key OpenRouter.
+  // ANAS Free uses the server's configured model.
+  if (provider === "openrouter") {
     try {
       model = await selectOpenRouterModel();
     } catch (error) {
       console.error(
         fmt.error(
           `Could not load OpenRouter models: ${
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error
+              ? error.message
+              : String(error)
           }`,
         ),
       );
+      process.exitCode = 1;
       return;
     }
   }
 
+  // 4. Choose mode.
   console.log();
   printModePanels();
 
@@ -294,6 +342,24 @@ export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
 
   config.set("mode", mode);
 
+  // 5. Check ANAS account after mode selection.
+  console.log();
+
+  try {
+    await requireCloudLogin();
+  } catch (error) {
+    console.error(
+      fmt.error(
+        error instanceof Error
+          ? error.message
+          : String(error),
+      ),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  // 6. Start chat with cloud authentication available.
   console.log();
 
   await startChat({

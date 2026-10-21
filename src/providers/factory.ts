@@ -38,6 +38,7 @@ export function createProvider(
       return new CloudOpenAIProvider(
         name,
         config.get("accessMethod") === "own-key",
+         model,
       );
   }
 }

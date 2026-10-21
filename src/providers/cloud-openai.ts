@@ -198,6 +198,7 @@ export class CloudOpenAIProvider implements BaseProvider {
     private readonly cloudProvider:
       "openai" | "gemini" | "openrouter" | "groq" = "openai",
     private readonly useOwnKey = false,
+    private readonly model?: string,
   ) {
     this.name = cloudProvider;
   }
@@ -235,6 +236,9 @@ export class CloudOpenAIProvider implements BaseProvider {
       body: JSON.stringify({
         provider: this.cloudProvider,
         useOwnKey: this.useOwnKey,
+         ...(this.cloudProvider === "openrouter" && this.model
+    ? { model: this.model }
+    : {}),
         messages: toApiMessages(messages, systemPrompt),
         tools: TOOLS,
         stream,
