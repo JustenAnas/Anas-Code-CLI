@@ -15,7 +15,7 @@ const PROVIDERS = {
     baseURL: undefined as string | undefined,
     envKey: undefined as string | undefined,
   },
-   claude: {
+  claude: {
     model: "claude-sonnet-4-5",
     label: "Claude",
     baseURL: undefined as string | undefined,
@@ -144,7 +144,7 @@ async function streamResponse(
   tools?: ToolDefinition[],
   model: string = PROVIDERS[provider].model,
 ): Promise<Response> {
-   const { label } = PROVIDERS[provider];
+  const { label } = PROVIDERS[provider];
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -167,7 +167,12 @@ async function streamResponse(
 
         const toolCallsByIndex = new Map<
           number,
-          { id: string; name: string; arguments: string }
+          {
+            id: string;
+            name: string;
+            arguments: string;
+            thoughtSignature?: string;
+          }
         >();
 
         for await (const chunk of completion) {
@@ -190,6 +195,17 @@ async function streamResponse(
             };
 
             if (call.id) existing.id = call.id;
+            if (provider === "gemini") {
+              const signature = (
+                call as typeof call & {
+                  extra_content?: {
+                    google?: { thought_signature?: string };
+                  };
+                }
+              ).extra_content?.google?.thought_signature;
+
+              if (signature) existing.thoughtSignature = signature;
+            }
             if (call.function?.name) existing.name += call.function.name;
             if (call.function?.arguments) {
               existing.arguments += call.function.arguments;
@@ -213,6 +229,9 @@ async function streamResponse(
               id: call.id || `call_${i}`,
               name: call.name,
               input: safeParse(call.arguments),
+              ...(provider === "gemini" && call.thoughtSignature
+                ? { thoughtSignature: call.thoughtSignature }
+                : {}),
             }));
 
           send("tool_calls", { toolCalls });
@@ -233,10 +252,10 @@ async function streamResponse(
           } else if (error.status === 429) {
             message = `${label} rate limit or quota exceeded`;
           } else if (error.status === 404) {
-  message = `${label} model "${model}" was not found or is unavailable to this API key.`;
-} else {
-  message = `${label} provider request failed (${error.status ?? "unknown status"})`;
-}
+            message = `${label} model "${model}" was not found or is unavailable to this API key.`;
+          } else {
+            message = `${label} provider request failed (${error.status ?? "unknown status"})`;
+          }
         }
 
         send("error", { error: message });
@@ -331,20 +350,20 @@ export async function POST(request: Request) {
     const provider = body.provider as CloudProvider;
     const cfg = PROVIDERS[provider];
     if (
-  body.model !== undefined &&
-  (provider !== "openrouter" ||
-    typeof body.model !== "string" ||
-    body.model.length < 1 ||
-    body.model.length > 200 ||
-    !/^[a-zA-Z0-9._:/-]+$/.test(body.model))
-) {
-  return respond({ error: "Invalid model selection" }, 400);
-}
+      body.model !== undefined &&
+      (provider !== "openrouter" ||
+        typeof body.model !== "string" ||
+        body.model.length < 1 ||
+        body.model.length > 200 ||
+        !/^[a-zA-Z0-9._:/-]+$/.test(body.model))
+    ) {
+      return respond({ error: "Invalid model selection" }, 400);
+    }
 
-const selectedModel =
-  provider === "openrouter" && typeof body.model === "string"
-    ? body.model
-    : cfg.model;
+    const selectedModel =
+      provider === "openrouter" && typeof body.model === "string"
+        ? body.model
+        : cfg.model;
 
     let client: OpenAI;
 
@@ -415,6 +434,17 @@ const selectedModel =
           id: call.id || `call_${i}`,
           name: call.function.name,
           input: safeParse(call.function.arguments),
+          ...(provider === "gemini"
+            ? {
+                thoughtSignature: (
+                  call as typeof call & {
+                    extra_content?: {
+                      google?: { thought_signature?: string };
+                    };
+                  }
+                ).extra_content?.google?.thought_signature,
+              }
+            : {}),
         })) ?? [];
 
     return respond({
@@ -424,35 +454,33 @@ const selectedModel =
       outputTokens: completion.usage?.completion_tokens ?? 0,
     });
   } catch (error) {
-  if (error instanceof OpenAI.APIError) {
-    if (error.status === 401) {
-      return respond({ error: "Invalid provider API key" }, 401);
+    if (error instanceof OpenAI.APIError) {
+      if (error.status === 401) {
+        return respond({ error: "Invalid provider API key" }, 401);
+      }
+
+      if (error.status === 429) {
+        return respond({ error: "Provider rate limit or quota exceeded" }, 429);
+      }
+
+      if (error.status === 404) {
+        return respond(
+          {
+            error:
+              "The selected provider model was not found or is unavailable.",
+          },
+          502,
+        );
+      }
+
+      return respond({ error: "Provider request failed" }, 502);
     }
 
-    if (error.status === 429) {
-      return respond(
-        { error: "Provider rate limit or quota exceeded" },
-        429,
-      );
-    }
+    console.error(
+      "[Provider Chat]",
+      error instanceof Error ? error.message : error,
+    );
 
-    if (error.status === 404) {
-      return respond(
-        {
-          error: "The selected provider model was not found or is unavailable.",
-        },
-        502,
-      );
-    }
-
-    return respond({ error: "Provider request failed" }, 502);
+    return respond({ error: "Provider chat request failed" }, 500);
   }
-
-  console.error(
-    "[Provider Chat]",
-    error instanceof Error ? error.message : error,
-  );
-
-  return respond({ error: "Provider chat request failed" }, 500);
-}
 }

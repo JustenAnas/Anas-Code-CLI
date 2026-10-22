@@ -10,6 +10,7 @@ export type ToolCall = {
   id?: string;
   name: string;
   input: Record<string, string>;
+  thoughtSignature?: string;
 };
 
 export type ProviderResponse = {

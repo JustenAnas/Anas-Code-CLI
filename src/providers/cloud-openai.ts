@@ -161,6 +161,15 @@ function toApiMessages(messages: Message[], systemPrompt?: string) {
                   name: call.name,
                   arguments: JSON.stringify(call.input),
                 },
+                ...(call.thoughtSignature
+                  ? {
+                      extra_content: {
+                        google: {
+                          thought_signature: call.thoughtSignature,
+                        },
+                      },
+                    }
+                  : {}),
               })),
             }
           : {}),
@@ -236,9 +245,9 @@ export class CloudOpenAIProvider implements BaseProvider {
       body: JSON.stringify({
         provider: this.cloudProvider,
         useOwnKey: this.useOwnKey,
-         ...(this.cloudProvider === "openrouter" && this.model
-    ? { model: this.model }
-    : {}),
+        ...(this.cloudProvider === "openrouter" && this.model
+          ? { model: this.model }
+          : {}),
         messages: toApiMessages(messages, systemPrompt),
         tools: TOOLS,
         stream,

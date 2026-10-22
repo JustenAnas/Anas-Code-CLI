@@ -1,4 +1,3 @@
-
 import { select, password } from "@inquirer/prompts";
 import boxen from "boxen";
 import chalk from "chalk";
@@ -30,11 +29,7 @@ const PROVIDERS: ProviderName[] = [
   "groq",
 ];
 
-const ANAS_FREE_PROVIDERS: ProviderName[] = [
-  "gemini",
-  "openrouter",
-  "groq",
-];
+const ANAS_FREE_PROVIDERS: ProviderName[] = ["gemini", "openrouter", "groq"];
 
 type WakeUpOptions = {
   verbose?: boolean;
@@ -47,9 +42,7 @@ function supportsAnasFree(provider: ProviderName): boolean {
 }
 
 function formatPrice(price: number): string {
-  return price === 0
-    ? "Free"
-    : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
+  return price === 0 ? "Free" : `$${(price * 1_000_000).toFixed(2)}/1M tokens`;
 }
 
 async function runDoctor(): Promise<void> {
@@ -65,11 +58,7 @@ function printModePanels(): void {
       {
         padding: 1,
         borderColor:
-          mode === "agent"
-            ? "green"
-            : mode === "ask"
-              ? "blue"
-              : "yellow",
+          mode === "agent" ? "green" : mode === "ask" ? "blue" : "yellow",
       },
     );
 
@@ -140,8 +129,7 @@ async function ensureApiKey(provider: ProviderName): Promise<void> {
         const claude = new ClaudeProvider(key);
         await claude.verifyApiKey();
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
 
         console.error(fmt.error(message));
 
@@ -167,16 +155,12 @@ async function requireCloudLogin(): Promise<void> {
   }
 
   console.log();
-  console.log(
-    chalk.yellow("ANAS account login is required to continue."),
-  );
+  console.log(chalk.yellow("ANAS account login is required to continue."));
 
   const loggedIn = await cloudLogin();
 
   if (!loggedIn) {
-    throw new Error(
-      "ANAS login failed. Please log in before starting chat.",
-    );
+    throw new Error("ANAS login failed. Please log in before starting chat.");
   }
 
   console.log(chalk.green("✓ ANAS account login successful"));
@@ -206,33 +190,25 @@ async function configureProviderAccess(
   await requireCloudLogin();
 
   if (await cloudClient.hasProviderKey(provider)) {
-    console.log(
-      chalk.green(`✓ ${provider} key found in ANAS Cloud`),
-    );
+    console.log(chalk.green(`✓ ${provider} key found in ANAS Cloud`));
     return;
   }
 
   const key = await password({
     message: `Enter your ${provider} API key:`,
     mask: "*",
-    validate: (value) =>
-      value.trim().length > 0 || "API key cannot be empty.",
+    validate: (value) => value.trim().length > 0 || "API key cannot be empty.",
   });
 
   await cloudClient.saveProviderKey(provider, key.trim());
 
-  console.log(
-    chalk.green(`✓ ${provider} key saved to ANAS Cloud`),
-  );
+  console.log(chalk.green(`✓ ${provider} key saved to ANAS Cloud`));
 }
 
 async function selectOpenRouterModel(): Promise<string> {
-  console.log(
-    fmt.dim("Fetching available OpenRouter models..."),
-  );
+  console.log(fmt.dim("Fetching available OpenRouter models..."));
 
-  const models: OpenRouterModel[] =
-    await fetchOpenRouterModels();
+  const models: OpenRouterModel[] = await fetchOpenRouterModels();
 
   if (models.length === 0) {
     throw new Error(
@@ -254,9 +230,7 @@ async function selectOpenRouterModel(): Promise<string> {
   });
 }
 
-export async function wakeUp(
-  options: WakeUpOptions = {},
-): Promise<void> {
+export async function wakeUp(options: WakeUpOptions = {}): Promise<void> {
   const { verbose = false } = options;
 
   printBanner();
@@ -266,11 +240,7 @@ export async function wakeUp(
     await runDoctor();
   } catch (error) {
     console.error(
-      fmt.error(
-        error instanceof Error
-          ? error.message
-          : String(error),
-      ),
+      fmt.error(error instanceof Error ? error.message : String(error)),
     );
     process.exitCode = 1;
     return;
@@ -295,11 +265,7 @@ export async function wakeUp(
     await configureProviderAccess(provider, method);
   } catch (error) {
     console.error(
-      fmt.error(
-        error instanceof Error
-          ? error.message
-          : String(error),
-      ),
+      fmt.error(error instanceof Error ? error.message : String(error)),
     );
     process.exitCode = 1;
     return;
@@ -316,9 +282,7 @@ export async function wakeUp(
       console.error(
         fmt.error(
           `Could not load OpenRouter models: ${
-            error instanceof Error
-              ? error.message
-              : String(error)
+            error instanceof Error ? error.message : String(error)
           }`,
         ),
       );
@@ -349,11 +313,7 @@ export async function wakeUp(
     await requireCloudLogin();
   } catch (error) {
     console.error(
-      fmt.error(
-        error instanceof Error
-          ? error.message
-          : String(error),
-      ),
+      fmt.error(error instanceof Error ? error.message : String(error)),
     );
     process.exitCode = 1;
     return;
