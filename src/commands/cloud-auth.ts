@@ -10,8 +10,25 @@ export function getCloudApiUrl(): string {
   );
 }
 
+const LOGIN_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
 export function isCloudLoggedIn(): boolean {
-  return Boolean(config.get("cloudToken"));
+  const token = config.get("cloudToken");
+  const loginAt = config.get("cloudLoginAt");
+
+  if (
+    !token ||
+    !loginAt ||
+    Date.now() - loginAt >= LOGIN_LIFETIME_MS ||
+    loginAt > Date.now()
+  ) {
+    config.delete("cloudToken");
+    config.delete("cloudEmail");
+    config.delete("cloudLoginAt");
+    return false;
+  }
+
+  return true;
 }
 
 export async function cloudLogin(): Promise<boolean> {
@@ -53,6 +70,7 @@ export async function cloudLogin(): Promise<boolean> {
       return false;
     }
 
+    config.set("cloudLoginAt", Date.now());
     config.set("cloudToken", result.token);
     config.set("cloudEmail", result.user?.email ?? email);
 
@@ -77,6 +95,7 @@ export async function cloudLogin(): Promise<boolean> {
 export async function cloudLogout(): Promise<void> {
   config.delete("cloudToken");
   config.delete("cloudEmail");
-
+  config.delete("cloudLoginAt");
+  
   console.log("Logged out of ANAS Cloud.");
 }

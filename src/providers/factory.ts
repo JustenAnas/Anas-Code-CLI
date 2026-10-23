@@ -26,11 +26,16 @@ export function createProvider(
     }
 
     case "openai": {
-      const key = getApiKey("openai");
-      return key
-        ? new OpenAIProvider(key)
-        : new CloudOpenAIProvider("openai", true);
-    }
+  const key = getApiKey("openai");
+
+  if (!key) {
+    throw new Error(
+      'OpenAI API key not set. Run "anas wakeup" to configure it.',
+    );
+  }
+
+  return new OpenAIProvider(key);
+}
 
     case "gemini":
     case "openrouter":

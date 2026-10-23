@@ -8,6 +8,7 @@ type UserConfig = {
   accessMethod?: "free" | "own-key";
   cloudToken?: string;
   cloudEmail?: string;
+  cloudLoginAt?: number;
 };
 
 export const config = new Conf<UserConfig>({

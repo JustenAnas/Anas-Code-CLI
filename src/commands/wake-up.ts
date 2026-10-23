@@ -170,39 +170,33 @@ async function configureProviderAccess(
   provider: ProviderName,
   method: AccessMethod,
 ): Promise<void> {
-  // Claude continues to use its existing local-key flow.
-  if (provider === "claude") {
+  if (method === "free") {
+    console.log(chalk.green("✓ ANAS Free tier selected"));
+    return;
+  }
+
+  if (provider === "openai" || provider === "claude") {
     await ensureApiKey(provider);
     return;
   }
 
-  // OpenAI: prefer a local key if one is already configured.
-  if (provider === "openai" && getApiKey("openai")) {
-    console.log(chalk.green("✓ openai local API key detected"));
-    return;
-  }
-
-  if (method !== "own-key") {
-    return;
-  }
-
-  // Cloud key operations require an authenticated ANAS account.
   await requireCloudLogin();
 
   if (await cloudClient.hasProviderKey(provider)) {
-    console.log(chalk.green(`✓ ${provider} key found in ANAS Cloud`));
+    console.log(chalk.green(`✓ Your ${provider} API key detected`));
     return;
   }
 
   const key = await password({
     message: `Enter your ${provider} API key:`,
     mask: "*",
-    validate: (value) => value.trim().length > 0 || "API key cannot be empty.",
+    validate: (value) =>
+      value.trim().length > 0 || "API key cannot be empty.",
   });
 
   await cloudClient.saveProviderKey(provider, key.trim());
 
-  console.log(chalk.green(`✓ ${provider} key saved to ANAS Cloud`));
+  console.log(chalk.green(`✓ Your ${provider} API key saved`));
 }
 
 async function selectOpenRouterModel(): Promise<string> {
