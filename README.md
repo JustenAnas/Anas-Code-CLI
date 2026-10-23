@@ -240,16 +240,18 @@ Inside an interactive session:
 
 ### Interactive slash commands
 
-| Command     | Description                             |
-| ----------- | --------------------------------------- |
-| `/help`     | Display available commands              |
-| `/mode`     | Change the execution mode               |
-| `/provider` | Change the AI provider, where supported |
-| `/history`  | Inspect conversation history            |
-| `/resume`   | Restore an existing session             |
-| `/new`      | Create a new session                    |
-| `/clear`    | Clear conversation context              |
-| `/exit`     | Exit interactive chat                   |
+| Command     | Description                                          |
+| ----------- | ---------------------------------------              |
+| `/help`     | Display available commands                           |
+| `/mode`     | Change the execution mode                            |
+| `/provider` | Change the AI provider, where supported              |
+| `/history`  | Inspect conversation history                         |
+| `/resume`   | Restore an existing session                          |
+| `/new`      | Create a new session                                 |
+| `/clear`    | Clear conversation context                           |
+| `/context`  | Show message count and estimated conversation tokens |
+| `/paste` | Write a prompt using Notepad                            |
+| `/exit`     | Exit interactive chat                                |
 
 Some commands may depend on the current CLI version.
 
