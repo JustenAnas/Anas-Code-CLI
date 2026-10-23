@@ -287,6 +287,23 @@ export async function startChat(options: ChatOptions = {}): Promise<void> {
       );
       continue;
     }
+    if (command.type === "context") {
+  const messageCount = session.messages.length;
+
+  const estimatedTokens = session.messages.reduce(
+    (total, message) => total + Math.ceil(message.content.length / 4),
+    0,
+  );
+
+  console.log(fmt.mode("\nContext Usage"));
+  console.log(`Messages: ${messageCount}`);
+  console.log(`Estimated conversation tokens: ~${estimatedTokens}`);
+  console.log(
+    fmt.dim("Approximate count; excludes system prompts and tool schemas.\n"),
+  );
+
+  continue;
+}
 
     if (command.type === "help") {
       console.log(fmt.label(`\n${command.output}\n`));

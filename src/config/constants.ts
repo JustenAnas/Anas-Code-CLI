@@ -16,4 +16,8 @@ export const SLASH_COMMANDS = [
   { command: "/help", description: "Show slash commands" },
   { command: "/context", description: "Show context window usage" },
   { command: "/exit", description: "End the chat session" },
+   { command: "/new", description: "Start a new session" },
+  { command: "/history", description: "List saved sessions" },
+  { command: "/resume", description: "Resume a previous session" },
+  { command: "/paste", description: "Write a prompt in Notepad" },
 ] as const;

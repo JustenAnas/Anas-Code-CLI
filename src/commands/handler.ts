@@ -8,7 +8,8 @@ export type CommandResult =
   | { type: "help"; output: string }
   | { type: "resume"; sessionId?: string }
   | { type: "mode"; mode: CliMode }
-  | { type: "not-command" };
+  | { type: "not-command" }
+  | { type: "context" }
 
 export function handleCommand(
   input: string,
@@ -35,7 +36,9 @@ export function handleCommand(
   if (trimmed === "/resume") {
     return { type: "resume" };
   }
-
+  if (trimmed === "/context") {
+  return { type: "context" };
+}
   if (trimmed === "/help") {
     const output = [
       "Slash commands:",
